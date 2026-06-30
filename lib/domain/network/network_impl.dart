@@ -1,0 +1,397 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:readbox/domain/network/network.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/routes.dart';
+import 'package:readbox/services/secure_storage_service.dart';
+import 'package:readbox/utils/navigator.dart';
+import 'package:readbox/utils/shared_preference.dart';
+
+class Network {
+  static int get DEFAULT_TIMEOUT => ApiConstant.apiTimeout;
+  static BaseOptions options = BaseOptions(
+    connectTimeout: DEFAULT_TIMEOUT,
+    receiveTimeout: DEFAULT_TIMEOUT,
+    sendTimeout: DEFAULT_TIMEOUT, // Added sendTimeout as well
+    baseUrl: ApiConstant.apiHost,
+  );
+  static final Dio _dio = Dio(options);
+  static final SecureStorageService _secureStorage = SecureStorageService();
+  static bool _isRefreshing = false;
+  static final List<RequestOptions> _requestQueue = [];
+  static Completer<bool>? _refreshCompleter;
+  Network._internal() {
+    // Bypass SSL certificate validation in debug mode only
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        LogInterceptor(responseBody: true, requestHeader: true),
+      );
+    }
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (
+          RequestOptions myOption,
+          RequestInterceptorHandler handler,
+        ) async {
+          // Lấy token từ secure storage
+          String? token = await _secureStorage.getToken();
+          if (token != null && token.isNotEmpty) {
+            myOption.headers["Authorization"] = "Bearer $token";
+          }
+
+          // Lấy ngôn ngữ hiện tại và thêm vào header
+          String lang = await SharedPreferenceUtil.getCurrentLanguage();
+          myOption.headers["x-custom-lang"] = lang;
+
+          // Lấy mã vùng (country code) từ thiết bị
+          final locale = ui.PlatformDispatcher.instance.locale;
+          if (locale.countryCode != null && locale.countryCode!.isNotEmpty) {
+            myOption.headers["x-country-code"] = locale.countryCode;
+            myOption.headers["x-region"] = locale.toLanguageTag();
+          }
+
+          return handler.next(myOption);
+        },
+        onError: (DioError error, ErrorInterceptorHandler handler) async {
+          if (error.response?.statusCode == 401) {
+            // Nếu đang refresh token, thêm request vào queue và chờ
+            if (_isRefreshing) {
+              _requestQueue.add(error.requestOptions);
+              // Chờ refresh token hoàn thành
+              final bool refreshSuccess =
+                  await _refreshCompleter?.future ?? false;
+              if (refreshSuccess) {
+                // Retry request với token mới
+                try {
+                  final String? newToken = await _secureStorage.getToken();
+                  if (newToken == null || newToken.isEmpty) {
+                    _forceLogout();
+                    return handler.next(error);
+                  }
+                  error.requestOptions.headers["Authorization"] =
+                      "Bearer $newToken";
+
+                  final Dio retryDio = Dio(options);
+                  final Response response = await retryDio.fetch(
+                    error.requestOptions,
+                  );
+                  return handler.resolve(response);
+                } catch (retryError) {
+                  if (kDebugMode) {
+                    print('Retry request failed: $retryError');
+                  }
+                  return handler.next(error);
+                }
+              } else {
+                return handler.next(error);
+              }
+            }
+
+            // Bắt đầu refresh token
+            final bool refreshSuccess = await _refreshToken();
+
+            if (refreshSuccess) {
+              // Retry request gốc với token mới
+              try {
+                final String? newToken = await _secureStorage.getToken();
+                error.requestOptions.headers["Authorization"] =
+                    "Bearer $newToken";
+                if (newToken == null || newToken.isEmpty) {
+                  _forceLogout();
+                  return handler.next(error);
+                }
+                final Dio retryDio = Dio(options);
+                final Response response = await retryDio.fetch(
+                  error.requestOptions,
+                );
+                return handler.resolve(response);
+              } catch (retryError) {
+                if (kDebugMode) {
+                  print('Retry request failed: $retryError');
+                }
+                return handler.next(error);
+              }
+            } else {
+              // Refresh thất bại, logout
+              _forceLogout();
+              return handler.next(error);
+            }
+          }
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+
+  static Network instance() {
+    return Network._internal();
+  }
+
+  Dio get dio => _dio;
+
+  Future<ApiResponse> get({
+    required String url,
+    Map<String, dynamic>? params,
+  }) async {
+    try {
+      Response response = await _dio.get(
+        url,
+        queryParameters: BaseParamRequest.request(params),
+        options: Options(responseType: ResponseType.json),
+      );
+      return getApiResponse(response);
+    } on DioError catch (e) {
+      //handle error
+      print("DioError: ${e.toString()}");
+      return getError(e);
+    }
+  }
+
+  Future<ApiResponse> post({
+    required String url,
+    Map<String, dynamic>? body,
+    Map<String, dynamic> params = const {},
+    String contentType = Headers.jsonContentType,
+  }) async {
+    try {
+      Response response = await _dio.post(
+        url,
+        data: body,
+        options: Options(
+          responseType: ResponseType.json,
+          contentType: contentType,
+        ),
+      );
+      return getApiResponse(response);
+    } catch (e) {
+      return getError(e as DioError);
+    }
+  }
+
+  Future<ApiResponse> postWithFormData({
+    required String url,
+    FormData? formData,
+    Map<String, dynamic> params = const {},
+    String contentType = Headers.jsonContentType,
+    Options? options,
+    CancelToken? cancelToken,
+    void Function(int, int)? onSendProgress,
+  }) async {
+    try {
+      Response response = await _dio.post(
+        url,
+        data: formData,
+        options:
+            options ??
+            Options(responseType: ResponseType.bytes, contentType: contentType),
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+      );
+      return getApiResponse(response);
+    } catch (e) {
+      if (e is DioError && e.type == DioErrorType.cancel) {
+        return ApiResponse.error('Upload đã bị hủy');
+      }
+      return getError(e as DioError);
+    }
+  }
+
+  Future<ApiResponse> put({
+    required String url,
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      Response response = await _dio.put(
+        url,
+        data: body,
+        options: Options(responseType: ResponseType.json),
+      );
+      return getApiResponse(response);
+    } catch (e) {
+      return getError(e as DioError);
+    }
+  }
+
+  Future<ApiResponse> patch({
+    required String url,
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      Response response = await _dio.patch(
+        url,
+        data: body,
+        options: Options(responseType: ResponseType.json),
+      );
+      return getApiResponse(response);
+    } catch (e) {
+      return getError(e as DioError);
+    }
+  }
+
+  Future<ApiResponse> delete({
+    required String url,
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      Response response = await _dio.delete(
+        url,
+        data: body,
+        options: Options(responseType: ResponseType.json),
+      );
+      return getApiResponse(response);
+    } catch (e) {
+      return getError(e as DioError);
+    }
+  }
+
+  ApiResponse getError(DioError e) {
+    if (e.response?.statusCode == 400) {
+      final messages = e.response?.data['message'];
+      if (messages is List) {
+        return ApiResponse.error(
+          messages.join(', '),
+          data: getDataReplace(e.response?.data),
+          code: e.response?.statusCode,
+        );
+      }
+      return ApiResponse.error(
+        e.response?.data['message'] ?? '',
+        data: getDataReplace(e.response?.data),
+        code: e.response?.statusCode,
+      );
+    }
+    switch (e.type) {
+      case DioErrorType.cancel:
+        return ApiResponse.error(AppLocalizations.current.error_cancel);
+      case DioErrorType.connectTimeout:
+        return ApiResponse.error(AppLocalizations.current.error_timeout);
+      case DioErrorType.receiveTimeout:
+        return ApiResponse.error(
+          AppLocalizations.current.error_request_timeout,
+        );
+      case DioErrorType.other:
+        return ApiResponse.error(
+          AppLocalizations.current.error_internal_server_error,
+        );
+      case DioErrorType.response:
+        return ApiResponse.error(
+          e.response?.data['message'] ?? '',
+          data: getDataReplace(e.response?.data),
+          code: e.response?.statusCode,
+        );
+      default:
+        return ApiResponse.error(AppLocalizations.current.error_common);
+    }
+  }
+
+  ApiResponse getApiResponse(Response response) {
+    return ApiResponse.success(
+      data: response.data,
+      code: response.statusCode,
+      status: response.statusCode,
+      errMessage: response.statusMessage ?? '',
+    );
+  }
+
+  Future<bool> _refreshToken() async {
+    if (_isRefreshing) {
+      // Nếu đang refresh, chờ kết quả
+      return await _refreshCompleter?.future ?? false;
+    }
+
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final String? refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) {
+        _forceLogout();
+        _refreshCompleter!.complete(false);
+        return false;
+      }
+
+      // Sử dụng một Dio riêng không có interceptor để tránh vòng lặp 401
+      final Dio refreshDio = Dio(options);
+      final String lang = await SharedPreferenceUtil.getCurrentLanguage();
+      final Response response = await refreshDio.post(
+        '${ApiConstant.apiHost}${ApiConstant.refreshToken}',
+        data: {'refreshToken': refreshToken},
+        options: Options(
+          responseType: ResponseType.json,
+          headers: {'x-custom-lang': lang},
+        ),
+      );
+
+      final data = response.data;
+      final String newAccessToken = data['accessToken'] ?? '';
+      final String newRefreshToken = data['refreshToken'] ?? '';
+      if (newAccessToken.isEmpty || newRefreshToken.isEmpty) {
+        _forceLogout();
+        _refreshCompleter!.complete(false);
+        return false;
+      }
+
+      await _secureStorage.saveToken(newAccessToken);
+      await _secureStorage.saveRefreshToken(newRefreshToken);
+
+      // Xử lý queue requests - không cần await vì đây là background task
+      _processRequestQueue();
+
+      _refreshCompleter!.complete(true);
+      return true;
+    } catch (err) {
+      if (kDebugMode) {
+        print('Refresh token failed: $err');
+      }
+      _forceLogout();
+      _refreshCompleter!.complete(false);
+      return false;
+    } finally {
+      _isRefreshing = false;
+      _refreshCompleter = null;
+    }
+  }
+
+  Future<void> _processRequestQueue() async {
+    final List<RequestOptions> queue = List.from(_requestQueue);
+    _requestQueue.clear();
+
+    for (final requestOptions in queue) {
+      try {
+        final String? newToken = await _secureStorage.getToken();
+        if (newToken == null || newToken.isEmpty) {
+          _forceLogout();
+          return;
+        }
+        requestOptions.headers["Authorization"] = "Bearer $newToken";
+
+        // Sử dụng Dio instance chính với interceptor để đảm bảo xử lý đúng
+        await _dio.fetch(requestOptions);
+
+        if (kDebugMode) {
+          print('Request retry successful for: ${requestOptions.path}');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Retry request failed for ${requestOptions.path}: $e');
+        }
+      }
+    }
+  }
+
+  Future<void> _forceLogout() async {
+    await SharedPreferenceUtil.clearData();
+    NavigationService.instance.navigatorKey.currentState
+        ?.pushNamedAndRemoveUntil(Routes.loginScreen, (route) => false);
+  }
+
+  getDataReplace(data) {
+    if (data is String) {
+      return data.replaceAll("loi:", "").replaceAll(":loi", "").trim();
+    }
+    return data;
+  }
+}

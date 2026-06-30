@@ -1,0 +1,494 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readbox/blocs/base_bloc/base.dart';
+import 'package:readbox/blocs/utils.dart';
+import 'package:readbox/domain/data/models/models.dart';
+import 'package:readbox/domain/repositories/repositories.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/services/services.dart';
+import 'package:readbox/utils/base_exception.dart';
+import 'package:readbox/utils/navigator.dart';
+import 'package:readbox/utils/shared_preference.dart';
+import 'package:readbox/services/revenuecat_service.dart';
+
+class AuthCubit extends Cubit<BaseState> {
+  final AuthRepository repository;
+  String? resetPasswordUsername;
+  final SecureStorageService _secureStorage = SecureStorageService();
+  final FCMService fcmService = FCMService();
+  AuthCubit({required this.repository}) : super(InitState()) {
+    fcmService.initialize();
+  }
+
+  Future doLogin({String? username, String? password}) async {
+    try {
+      emit(LoadingState());
+      FocusManager.instance.primaryFocus?.unfocus();
+      // Lấy FCM token để gửi kèm theo request
+      final fcmToken = fcmService.fcmToken;
+
+      AuthenModel userModel = await repository.login({
+        "username": username?.trim().toLowerCase(),
+        "password": password,
+        if (fcmToken != null) "fcmToken": fcmToken,
+        if (fcmService.deviceId != null) "deviceId": fcmService.deviceId,
+        if (fcmService.appVersion != null) "appVersion": fcmService.appVersion,
+        if (fcmService.platform == 'ios') "platform": 'ios',
+        if (fcmService.platform == 'android') "platform": 'android',
+      });
+
+      if (userModel.user != null && userModel.user!.id != null) {
+        RevenueCatService.instance.login(userModel.user!.id.toString());
+      }
+
+      emit(LoadedState(userModel));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doLogout() async {
+    try {
+      emit(LoadingState());
+
+      // Kiểm tra trạng thái nhớ tài khoản trước khi xóa dữ liệu
+      final bool rememberMe = await SharedPreferenceUtil.getRememberPassword();
+      final bool isFirstLogin = await SharedPreferenceUtil.getFirstLogin();
+      Map<String, String>? credentials;
+      if (rememberMe) {
+        credentials = await BiometricAuthService.getStoredCredentials();
+      }
+
+      // Xóa tất cả dữ liệu nhạy cảm từ secure storage
+      await _secureStorage.clearAllSecureData();
+
+      // Xóa preferences (non-sensitive data)
+      await SharedPreferenceUtil.clearData();
+      // restore isFirstLogin
+      await SharedPreferenceUtil.saveFirstLogin(isFirstLogin);
+      // Nếu có nhớ tài khoản, khôi phục lại cờ và thông tin đăng nhập
+      if (rememberMe) {
+        await SharedPreferenceUtil.setRememberPassword(true);
+        if (credentials != null &&
+            credentials['username'] != null &&
+            credentials['password'] != null) {
+          await BiometricAuthService.storeCredentials(
+            credentials['username']!,
+            credentials['password']!,
+          );
+        }
+      } else {
+        // Đảm bảo xóa sạch thông tin đăng nhập nếu không chọn remember me
+        await BiometricAuthService.clearStoredCredentials();
+      }
+
+      await RevenueCatService.instance.logout();
+      emit(LoadedState(null));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future getProfile() async {
+    try {
+      emit(LoadingState());
+      final profile = await repository.getProfile();
+      if (profile != null && profile.id != null) {
+        RevenueCatService.instance.login(profile.id.toString());
+      }
+      emit(LoadedState(profile));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doForgotPassword({String? username}) async {
+    try {
+      emit(LoadingState());
+      // await repository.forgotPassword(userName);
+      emit(LoadedState(null));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  // reset password
+  Future resetPassword({String? username, String? newPassword}) async {
+    try {
+      emit(LoadingState());
+      var result = await repository.resetPassword({
+        "username": username,
+        "newPassword": newPassword,
+      });
+      emit(LoadedState(result));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doRegister({
+    String? fullName,
+    String? email,
+    String? phone,
+    String? username,
+    String? password,
+  }) async {
+    try {
+      emit(LoadingState());
+      var result = await repository.register({
+        "fullName": fullName,
+        "email": email,
+        "phone": phone,
+        "username": username,
+        "password": password,
+      });
+
+      emit(LoadedState(result));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future verifyPin({required String email, required String pin}) async {
+    try {
+      emit(LoadingState());
+      var result = await repository.verifyPin({"email": email, "pin": pin});
+
+      emit(LoadedState(result));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future<bool> verifyToken() async {
+    final token = await _secureStorage.getToken();
+    if (token == null) {
+      return false;
+    }
+    return await repository.verifyToken(token);
+  }
+
+  Future resendPin({required String email}) async {
+    try {
+      emit(LoadingState());
+      var result = await repository.resendPin({"email": email});
+
+      emit(LoadedState(result));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future forgotPassword({required String username}) async {
+    try {
+      emit(LoadingState());
+      final params = {"username": username};
+      var result = await repository.forgotPassword(params);
+      emit(LoadedState(result));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doGoogleLogin() async {
+    try {
+      emit(LoadingState());
+
+      // Kiểm tra Google Play Services trước
+      final bool isGooglePlayServicesAvailable =
+          await SocialLoginService.isGooglePlayServicesAvailable();
+
+      if (!isGooglePlayServicesAvailable) {
+        emit(
+          ErrorState(
+            AppLocalizations.current.google_play_services_not_available,
+          ),
+        );
+        return;
+      }
+
+      final socialData = await SocialLoginService.signInWithGoogle();
+      if (socialData == null) {
+        emit(ErrorState(AppLocalizations.current.google_signin_failed));
+        return;
+      }
+
+      // Lấy FCM token để gửi kèm theo request
+      final fcmToken = fcmService.fcmToken;
+      // Thêm fcmToken vào socialData
+      final loginData = Map<String, dynamic>.from(socialData);
+      if (fcmToken != null) {
+        loginData['fcmToken'] = fcmToken;
+      }
+      final deviceId = fcmService.deviceId;
+      loginData['deviceId'] = deviceId;
+
+      AuthenModel authModel = await repository.mobileSocialLogin(loginData);
+
+      // Lưu thông tin social login cho sinh trắc học
+      await BiometricAuthService.storeSocialLoginInfo(socialData);
+
+      if (authModel.user != null && authModel.user!.id != null) {
+        RevenueCatService.instance.login(authModel.user!.id.toString());
+      }
+
+      emit(LoadedState(authModel));
+    } on BaseException catch (e) {
+      if (e.code != 'google_error_other') {
+        emit(ErrorState(e.message));
+      } else {
+        emit(InitState());
+      }
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doFacebookLogin() async {
+    try {
+      emit(LoadingState());
+
+      final socialData = await SocialLoginService.signInWithFacebook();
+      if (socialData == null) {
+        emit(InitState()); // User cancelled
+        return;
+      }
+
+      // Lấy FCM token để gửi kèm theo request
+      final fcmToken = fcmService.fcmToken;
+
+      // Thêm fcmToken vào socialData
+      final loginData = Map<String, dynamic>.from(socialData);
+      if (fcmToken != null) {
+        loginData['fcmToken'] = fcmToken;
+      }
+
+      AuthenModel authModel = await repository.mobileSocialLogin(loginData);
+
+      // Lưu thông tin social login cho sinh trắc học
+      await BiometricAuthService.storeSocialLoginInfo(socialData);
+
+      if (authModel.user != null && authModel.user!.id != null) {
+        RevenueCatService.instance.login(authModel.user!.id.toString());
+      }
+
+      emit(LoadedState(authModel));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doAppleLogin() async {
+    try {
+      emit(LoadingState());
+
+      final socialData = await SocialLoginService.signInWithApple();
+      if (socialData == null) {
+        emit(InitState()); // User cancelled
+        return;
+      }
+
+      // Lấy FCM token để gửi kèm theo request
+      final fcmToken = fcmService.fcmToken;
+
+      // Thêm fcmToken vào socialData
+      final loginData = Map<String, dynamic>.from(socialData);
+      if (fcmToken != null) {
+        loginData['fcmToken'] = fcmToken;
+      }
+      final deviceId = fcmService.deviceId;
+      loginData['deviceId'] = deviceId;
+
+      AuthenModel authModel = await repository.mobileSocialLogin(loginData);
+
+      // Lưu thông tin social login cho sinh trắc học
+      await BiometricAuthService.storeSocialLoginInfo(socialData);
+
+      emit(LoadedState(authModel));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future doMobileSocialLogin({
+    required String platformId,
+    required String email,
+    required String fullName,
+    required String platform,
+    required String accessToken, // Bây giờ là required
+    String? picture,
+    String? deviceId,
+  }) async {
+    try {
+      emit(LoadingState());
+
+      // Lấy FCM token để gửi kèm theo request
+      final fcmToken = fcmService.fcmToken;
+
+      AuthenModel authModel = await repository.mobileSocialLogin({
+        "platformId": platformId,
+        "email": email,
+        "fullName": fullName,
+        "platform": platform,
+        "picture": picture,
+        "accessToken": accessToken, // Required cho token verification
+        "deviceId": deviceId,
+        if (fcmToken != null) "fcmToken": fcmToken,
+      });
+
+      if (authModel.user != null && authModel.user!.id != null) {
+        RevenueCatService.instance.login(authModel.user!.id.toString());
+      }
+
+      emit(LoadedState(authModel));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  /// Đăng nhập bằng sinh trắc học
+  Future doBiometricLogin() async {
+    try {
+      emit(LoadingState());
+
+      final result = await BiometricAuthService.loginWithBiometrics();
+      if (result.isSuccess && result.data != null) {
+        if (result.isSocialLogin) {
+          // Đăng nhập lại bằng social
+          final socialData = result.data!;
+
+          // Lấy FCM token để gửi kèm theo request
+          final fcmToken = fcmService.fcmToken;
+
+          // Thêm fcmToken vào socialData
+          final loginData = Map<String, dynamic>.from(socialData);
+          if (fcmToken != null) {
+            loginData['fcmToken'] = fcmToken;
+          }
+
+          AuthenModel authModel = await repository.mobileSocialLogin(loginData);
+
+          if (authModel.user != null && authModel.user!.id != null) {
+            RevenueCatService.instance.login(authModel.user!.id.toString());
+          }
+
+          emit(LoadedState(authModel));
+        } else {
+          // Đăng nhập bằng username/password
+          // FCM token sẽ được gửi trong doLogin()
+          final credentials = result.data!;
+          await doLogin(
+            username: credentials['username'],
+            password: credentials['password'],
+          );
+        }
+      } else {
+        emit(ErrorState(result.message ?? AppLocalizations.current.biometric_not_available));
+      }
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  /// Bật/tắt sinh trắc học và lưu thông tin đăng nhập
+  Future toggleBiometric(
+    bool enabled, {
+    String? username,
+    String? password,
+  }) async {
+    try {
+      if (enabled) {
+        // Kiểm tra khả năng sinh trắc học
+        final capability =
+            await BiometricAuthService.checkBiometricCapability();
+        if (capability != BiometricCapability.available) {
+          String message;
+          switch (capability) {
+            case BiometricCapability.notSupported:
+              message = 'Thiết bị không hỗ trợ sinh trắc học';
+              break;
+            case BiometricCapability.notEnrolled:
+              message =
+                  'Chưa thiết lập sinh trắc học. Vui lòng thiết lập trong Cài đặt thiết bị';
+              break;
+            case BiometricCapability.notAvailable:
+              message = 'Sinh trắc học không khả dụng';
+              break;
+            default:
+              message = 'Lỗi không xác định';
+          }
+          throw Exception(message);
+        }
+
+        // Xác thực sinh trắc học trước khi bật
+        final authResult =
+            await BiometricAuthService.authenticateWithBiometrics(
+              localizedReason: 'Xác thực để bật đăng nhập bằng sinh trắc học',
+            );
+
+        if (!authResult.isSuccess) {
+          throw Exception(
+            authResult.message ?? 'Xác thực sinh trắc học thất bại',
+          );
+        }
+
+        // Lưu thông tin đăng nhập nếu có
+        if (username != null && password != null) {
+          await BiometricAuthService.storeCredentials(username, password);
+        }
+
+        // Bật sinh trắc học
+        await BiometricAuthService.setBiometricEnabledInApp(true);
+      } else {
+        // Tắt sinh trắc học và xóa tất cả thông tin đăng nhập
+        await BiometricAuthService.setBiometricEnabledInApp(false);
+        await BiometricAuthService.clearAllStoredLoginInfo();
+      }
+    } catch (e) {
+      throw Exception(BlocUtils.getMessageError(e));
+    }
+  }
+
+  /// Kiểm tra trạng thái sinh trắc học
+  Future<bool> isBiometricEnabled() async {
+    return await BiometricAuthService.isBiometricEnabledInApp();
+  }
+
+  /// Kiểm tra khả năng sử dụng sinh trắc học
+  Future<BiometricCapability> checkBiometricCapability() async {
+    return await BiometricAuthService.checkBiometricCapability();
+  }
+
+  /// Cập nhật thông tin profile
+  Future updateProfile({required UserModel userModel}) async {
+    try {
+      emit(LoadingState());
+      // Repository sẽ tự động lưu vào secure storage
+      UserModel updatedUserModel = await repository.updateProfile(userModel);
+      emit(LoadedState(updatedUserModel));
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+
+  Future deleteAccount(String userId) async {
+    try {
+      emit(LoadingState());
+      bool success = await repository.deleteAccount(userId);
+      if (success) {
+        // Xóa tất cả dữ liệu nhạy cảm từ secure storage
+        await _secureStorage.clearAllSecureData();
+        // Xóa preferences (non-sensitive data)
+        await SharedPreferenceUtil.clearData();
+        await RevenueCatService.instance.logout();
+
+        // Phát state báo hiệu đã xóa thành công để UI handle navigation
+        emit(LoadedState({'isDeleted': true}));
+      } else {
+        emit(ErrorState(AppLocalizations.current.delete_account_failed));
+      }
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e)));
+    }
+  }
+}

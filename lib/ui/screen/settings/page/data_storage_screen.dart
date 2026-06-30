@@ -1,0 +1,851 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readbox/blocs/base_bloc/base.dart';
+import 'package:readbox/blocs/cubit.dart';
+import 'package:readbox/domain/data/models/models.dart';
+import 'package:readbox/gen/assets.gen.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/res/res.dart';
+import 'package:readbox/routes.dart';
+import 'package:readbox/ui/widget/widget.dart';
+
+class DataStorageScreen extends StatefulWidget {
+  const DataStorageScreen({super.key});
+
+  @override
+  State<DataStorageScreen> createState() => _DataStorageScreenState();
+}
+
+class _DataStorageScreenState extends State<DataStorageScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  Map<String, int> interactionCounts = {};
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward();
+
+    // Load subscription data
+    context.read<UserSubscriptionCubit>().loadMe();
+
+    // Load interaction stats
+    context.read<UserInteractionCubit>().getMyInteractionCounts().then((value) {
+      setState(() {
+        interactionCounts = value;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BaseScreen<UserSubscriptionCubit>(
+      useSafeAreaBottom: false,
+      useSafeAreaTop: false,
+      autoHandleState: true,
+      title: AppLocalizations.current.usage_statistics,
+      onRetry: () async {
+        await context.read<UserSubscriptionCubit>().loadMe();
+      },
+      body: BlocBuilder<UserSubscriptionCubit, BaseState>(
+        builder: (context, state) {
+          if (state is LoadedState<UserSubscriptionModel>) {
+            final subscription = state.data;
+            return FadeTransition(
+              opacity: _fadeAnimation,
+              child: _buildContent(context, subscription),
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return RefreshIndicator(
+      onRefresh: () async {
+        await context.read<UserSubscriptionCubit>().loadMe();
+        final counts =
+            await context.read<UserInteractionCubit>().getMyInteractionCounts();
+        if (mounted) {
+          setState(() {
+            interactionCounts = counts;
+          });
+        }
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppDimens.SIZE_16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Current Plan Card
+            _buildCurrentPlanCard(context, subscription, theme, colorScheme),
+            const SizedBox(height: AppDimens.SIZE_24),
+
+            // Usage Statistics Title
+            Text(
+              AppLocalizations.current.usage_statistics,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppDimens.SIZE_16),
+
+            // Storage Usage
+            _buildStorageUsageCard(context, subscription, theme, colorScheme),
+            const SizedBox(height: AppDimens.SIZE_16),
+
+            // TTS Usage
+            if (!subscription.isFree) ...[
+              _buildTTSUsageCard(context, subscription, theme, colorScheme),
+              const SizedBox(height: AppDimens.SIZE_16),
+            ],
+
+            // Convert Usage
+            if (!subscription.isFree) ...[
+              _buildConvertUsageCard(context, subscription, theme, colorScheme),
+              const SizedBox(height: AppDimens.SIZE_16),
+            ],
+
+            // Download Usage (hiện cho cả Free vì Free có giới hạn thật):
+            // - Free: limit > 0  → có progress bar
+            // - Pro:  limit <= 0 → hiển thị "Unlimited"
+            _buildDownloadUsageCard(context, subscription, theme, colorScheme),
+            const SizedBox(height: AppDimens.SIZE_24),
+
+            // Activity Statistics
+            if (interactionCounts.isNotEmpty) ...[
+              Text(
+                AppLocalizations.current.activity_statistics,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: AppDimens.SIZE_16),
+              _buildActivityGrid(context, theme, colorScheme),
+              const SizedBox(height: AppDimens.SIZE_24),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentPlanCard(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final plan = subscription.plan;
+    final isFree = subscription.isFree;
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.SIZE_20),
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(Assets.images.appBarBackground.path),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            theme.colorScheme.onInverseSurface,
+            BlendMode.darken,
+          ),
+        ),
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_16),
+        boxShadow: [
+          BoxShadow(
+            color: (isFree ? colorScheme.shadow : colorScheme.primary)
+                .withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppDimens.SIZE_12),
+                decoration: BoxDecoration(
+                  color:
+                      isFree
+                          ? colorScheme.onSecondary
+                          : Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+                ),
+                child: Icon(
+                  isFree
+                      ? Icons.workspace_premium_outlined
+                      : Icons.star_rounded,
+                  color: isFree ? colorScheme.primary : Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: AppDimens.SIZE_16),
+              Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.4,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.current.currentPlan,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color:
+                            isFree
+                                ? colorScheme.onSecondary.withValues(alpha: 0.6)
+                                : Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      plan?.name ?? AppLocalizations.current.freePlan,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isFree ? colorScheme.onSecondary : Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isFree) ...[
+                const SizedBox(width: AppDimens.SIZE_16),
+                InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(context, Routes.subscriptionPlanScreen);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.SIZE_12,
+                      vertical: AppDimens.SIZE_6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).primaryColor.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.star_rounded, color: Colors.white, size: 20),
+                        const SizedBox(width: AppDimens.SIZE_4),
+                        Text(
+                          AppLocalizations.current.upgrade_now,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (!isFree) ...[
+                const SizedBox(width: AppDimens.SIZE_16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.SIZE_12,
+                    vertical: AppDimens.SIZE_6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+                  ),
+                  child: Text(
+                    AppLocalizations.current.pro,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (plan?.description != null) ...[
+                      const SizedBox(height: AppDimens.SIZE_12),
+                      Text(
+                        plan!.description!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color:
+                              isFree
+                                  ? colorScheme.onSecondary.withValues(
+                                    alpha: 0.7,
+                                  )
+                                  : Colors.white.withValues(alpha: 0.9),
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                    ],
+                    if (!isFree && subscription.priceDisplay.isNotEmpty) ...[
+                      const SizedBox(height: AppDimens.SIZE_12),
+                      Text(
+                        subscription.priceDisplay,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppDimens.SIZE_4),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: AppDimens.SIZE_12),
+                    _buildPeriodRow(
+                      context,
+                      '${AppLocalizations.current.started_at}: ',
+                      _formatDate(subscription.startedAt),
+                      theme,
+                      colorScheme,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPeriodRow(
+                      context,
+                      '${AppLocalizations.current.expires_at}: ',
+                      _formatDate(subscription.expiresAt),
+                      theme,
+                      colorScheme,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStorageUsageCard(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final plan = subscription.plan;
+    final used = subscription.storageUsedBytes;
+    final limit = plan?.storageLimitBytes ?? 0;
+    final percentage = limit > 0 ? (used / limit * 100).clamp(0.0, 100.0) : 0.0;
+    final isUnlimited = limit == 9999 || limit >= 1099511627776; // 1TB
+
+    return _buildUsageCard(
+      context: context,
+      theme: theme,
+      colorScheme: colorScheme,
+      icon: Icons.storage_rounded,
+      iconColor: Colors.blue,
+      title: AppLocalizations.current.storage_usage,
+      used: _formatBytes(used),
+      limit: isUnlimited ? 'Unlimited' : _formatBytes(limit),
+      percentage: percentage,
+      isUnlimited: isUnlimited,
+    );
+  }
+
+  Widget _buildTTSUsageCard(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final plan = subscription.plan;
+    final used = subscription.ttsUsedInPeriod; // Số ký tự đã đọc
+    final limit = plan?.ttsLimitPerPeriod ?? 0;
+    final percentage = limit > 0 ? (used / limit * 100).clamp(0.0, 100.0) : 0.0;
+    final isUnlimited = true; // Số ký tự rất lớn = unlimited
+
+    return _buildUsageCard(
+      context: context,
+      theme: theme,
+      colorScheme: colorScheme,
+      icon: Icons.record_voice_over_rounded,
+      iconColor: Colors.green,
+      title: AppLocalizations.current.tts_usage,
+      used: _formatCharacters(used),
+      limit: AppLocalizations.current.unlimited,
+      percentage: percentage,
+      isUnlimited: isUnlimited,
+      unit: '',
+    );
+  }
+
+  Widget _buildConvertUsageCard(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final plan = subscription.plan;
+    final used =
+        interactionCounts['convert'] ?? subscription.convertUsedInPeriod;
+    final limit = plan?.convertLimitPerPeriod ?? 0;
+    final percentage = limit > 0 ? (used / limit * 100).clamp(0.0, 100.0) : 0.0;
+    final isUnlimited = true;
+
+    return _buildUsageCard(
+      context: context,
+      theme: theme,
+      colorScheme: colorScheme,
+      icon: Icons.transform_rounded,
+      iconColor: Colors.orange,
+      title: AppLocalizations.current.convert_usage,
+      used: '$used',
+      limit: AppLocalizations.current.unlimited,
+      percentage: percentage,
+      isUnlimited: isUnlimited,
+      unit: AppLocalizations.current.times,
+    );
+  }
+
+  /// Card thống kê số lượt tải xuống của user.
+  /// - `used` lấy từ `interactionCounts['download']` (đếm lifetime từ server).
+  /// - `limit` lấy từ `plan.downloadLimitPerPeriod`:
+  ///     • `<= 0`  → unlimited (Pro plan thường set 0 = không giới hạn).
+  ///     • `> 0`   → hiển thị progress bar `used / limit`.
+  Widget _buildDownloadUsageCard(
+    BuildContext context,
+    UserSubscriptionModel subscription,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final plan = subscription.plan;
+    final used = interactionCounts['download'] ?? 0;
+    final limit = plan?.downloadLimitPerPeriod ?? 0;
+    final isUnlimited = limit <= 0;
+    final percentage =
+        isUnlimited ? 0.0 : (used / limit * 100).clamp(0.0, 100.0);
+
+    return _buildUsageCard(
+      context: context,
+      theme: theme,
+      colorScheme: colorScheme,
+      icon: Icons.download_rounded,
+      iconColor: Colors.teal,
+      title: AppLocalizations.current.download_usage,
+      used: '$used',
+      limit: isUnlimited ? AppLocalizations.current.unlimited : '$limit',
+      percentage: percentage,
+      isUnlimited: isUnlimited,
+      unit: AppLocalizations.current.times,
+    );
+  }
+
+  Widget _buildUsageCard({
+    required BuildContext context,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String used,
+    required String limit,
+    required double percentage,
+    required bool isUnlimited,
+    String? unit,
+  }) {
+    final isNearLimit = percentage >= 80 && !isUnlimited;
+    final isOverLimit = percentage >= 100 && !isUnlimited;
+
+    Color getProgressColor() {
+      if (isOverLimit) return Colors.red;
+      if (isNearLimit) return Colors.orange;
+      return iconColor;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.SIZE_20),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppDimens.SIZE_10),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppDimens.SIZE_10),
+                ),
+                child: Icon(icon, color: iconColor, size: 24),
+              ),
+              const SizedBox(width: AppDimens.SIZE_12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              if (isOverLimit)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.SIZE_8,
+                    vertical: AppDimens.SIZE_4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppDimens.SIZE_6),
+                  ),
+                  child: Text(
+                    AppLocalizations.current.over_limit,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.SIZE_16),
+
+          // Usage text
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                used,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                '/ $limit ${unit ?? ''}',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.SIZE_12),
+
+          // Progress bar
+          if (!isUnlimited) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+              child: LinearProgressIndicator(
+                value: percentage / 100,
+                minHeight: 8,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(getProgressColor()),
+              ),
+            ),
+            const SizedBox(height: AppDimens.SIZE_8),
+            Text(
+              '${percentage.toStringAsFixed(1)}% ${AppLocalizations.current.used}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.SIZE_12,
+                vertical: AppDimens.SIZE_8,
+              ),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.all_inclusive, size: 16, color: iconColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    AppLocalizations.current.unlimited,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: iconColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodRow(
+    BuildContext context,
+    String label,
+    String value,
+    ThemeData theme,
+    ColorScheme colorScheme, {
+    bool isHighlight = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSecondary.withValues(alpha: 0.7),
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500,
+            color: isHighlight ? Colors.orange : colorScheme.onSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActivityGrid(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final l10n = AppLocalizations.current;
+    final items = <_StatItem>[
+      _StatItem(
+        l10n.reading_count,
+        interactionCounts['reading'] ?? 0,
+        Icons.auto_stories_rounded,
+        Colors.indigo,
+      ),
+      _StatItem(
+        l10n.download_count,
+        interactionCounts['download'] ?? 0,
+        Icons.download_rounded,
+        Colors.teal,
+      ),
+      _StatItem(
+        l10n.favorite_count,
+        interactionCounts['favorite'] ?? 0,
+        Icons.favorite_rounded,
+        Colors.red,
+      ),
+      _StatItem(
+        l10n.share_count,
+        interactionCounts['share'] ?? 0,
+        Icons.share_rounded,
+        Colors.blue,
+      ),
+      _StatItem(
+        l10n.rating_count,
+        interactionCounts['rating'] ?? 0,
+        Icons.star_rounded,
+        Colors.orange,
+      ),
+      _StatItem(
+        l10n.archived_count,
+        interactionCounts['archived'] ?? 0,
+        Icons.archive_rounded,
+        Colors.brown,
+      ),
+    ];
+
+    final total = interactionCounts.values.fold<int>(0, (sum, v) => sum + v);
+
+    return Column(
+      children: [
+        // Total count banner
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.SIZE_20,
+            vertical: AppDimens.SIZE_16,
+          ),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.insights_rounded,
+                color: colorScheme.onPrimaryContainer,
+                size: 28,
+              ),
+              const SizedBox(width: AppDimens.SIZE_12),
+              Expanded(
+                child: Text(
+                  l10n.total_interactions,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              Text(
+                '$total',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppDimens.SIZE_12),
+        // Grid of stats
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.0,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _buildStatTile(theme, colorScheme, item);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatTile(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    _StatItem item,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.SIZE_12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(item.icon, color: item.color, size: 20),
+          ),
+          const SizedBox(width: AppDimens.SIZE_10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${item.count}',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  item.label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCharacters(int chars) {
+    if (chars >= 1000000) {
+      return '${(chars / 1000000).toStringAsFixed(1).replaceAll('.0', '')}M';
+    }
+    if (chars >= 1000) {
+      return '${(chars / 1000).toStringAsFixed(1).replaceAll('.0', '')}K';
+    }
+    return '$chars';
+  }
+
+  String _formatBytes(int bytes) {
+    const int kb = 1024;
+    const int mb = kb * 1024;
+    const int gb = mb * 1024;
+
+    if (bytes >= gb) {
+      return '${(bytes / gb).toStringAsFixed(2)} GB';
+    } else if (bytes >= mb) {
+      return '${(bytes / mb).toStringAsFixed(1)} MB';
+    } else if (bytes >= kb) {
+      return '${(bytes / kb).toStringAsFixed(0)} KB';
+    } else {
+      return '$bytes B';
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date.toLocal());
+  }
+}
+
+class _StatItem {
+  final String label;
+  final int count;
+  final IconData icon;
+  final Color color;
+
+  const _StatItem(this.label, this.count, this.icon, this.color);
+}

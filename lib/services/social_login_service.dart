@@ -1,0 +1,280 @@
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:readbox/config/google_signin_config.dart';
+import 'dart:io';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/utils/base_exception.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
+class SocialLoginService {
+  static final GoogleSignIn _googleSignIn = GoogleSignInConfig.googleSignIn;
+
+  /// Kiểm tra xem app có đang chạy trên simulator không
+  static bool get isSimulator {
+    return Platform.isIOS &&
+        Platform.environment['SIMULATOR_DEVICE_NAME'] != null;
+  }
+
+  /// Kiểm tra Google Play Services có sẵn không
+  static Future<bool> isGooglePlayServicesAvailable() async {
+    try {
+      await _googleSignIn.isSignedIn();
+      return true;
+    } catch (e) {
+      print('Google Play Services not available: $e');
+      return false;
+    }
+  }
+
+  /// Đăng nhập bằng Google
+  static Future<Map<String, dynamic>?> signInWithGoogle() async {
+    try {
+      // Kiểm tra Google Play Services availability
+      try {
+        final bool isAvailable = await _googleSignIn.isSignedIn();
+        print('Google Sign-In isSignedIn: $isAvailable');
+      } catch (e) {
+        print('⚠️ Google Play Services check failed: $e');
+      }
+
+      // Thử sign out trước để clear session
+      try {
+        await _googleSignIn.signOut();
+        print('Signed out successfully');
+      } catch (e) {
+        print('⚠️ Sign out failed (may be normal): $e');
+      }
+
+      // Thử sign in với timeout
+      print('Attempting to sign in...');
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .signIn()
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw BaseException(
+                message:
+                    AppLocalizations.current.google_play_services_not_available,
+              );
+            },
+          );
+
+      print('Google Sign-In result: ${googleUser?.email}');
+
+      if (googleUser == null) {
+        throw BaseException(
+          message: AppLocalizations.current.user_cancelled_google_sign_in,
+        );
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      return {
+        'platformId': googleUser.id,
+        'email': googleUser.email,
+        'fullName': googleUser.displayName ?? '',
+        'picture': googleUser.photoUrl,
+        'platform': 'google',
+        'accessToken': googleAuth.accessToken,
+      };
+    } catch (error) {
+      // Log chi tiết lỗi để debug
+      print('❌ Google Sign-In Error: $error');
+      print('❌ Error type: ${error.runtimeType}');
+
+      // Xử lý ApiBaseException 8 (INTERNAL_ERROR)
+      if (error.toString().contains('8:') ||
+          error.toString().contains('INTERNAL_ERROR') ||
+          error.toString().contains('ApiBaseException: 8')) {
+        throw BaseException(
+          message: AppLocalizations.current.google_signin_failed,
+        );
+      }
+
+      // Xử lý ApiBaseException 12500 (DEVELOPER_ERROR)
+      if (error.toString().contains('12500') ||
+          error.toString().contains('DEVELOPER_ERROR') ||
+          error.toString().contains('developer_error')) {
+        print('⚠️ DEVELOPER_ERROR (12500) - Cấu hình OAuth không đúng');
+        throw BaseException(
+          message: AppLocalizations.current.google_developer_error,
+        );
+      }
+
+      // Xử lý các loại lỗi khác
+      if (error.toString().contains('sign_in_failed')) {
+        throw BaseException(
+          message: AppLocalizations.current.google_signin_failed,
+        );
+      } else if (error.toString().contains('network_error') ||
+          error.toString().contains('SocketBaseException') ||
+          error.toString().contains('Network is unreachable')) {
+        throw BaseException(
+          message: AppLocalizations.current.google_network_error,
+        );
+      } else if (error.toString().contains('invalid_client') ||
+          error.toString().contains('10:')) {
+        throw BaseException(
+          message: AppLocalizations.current.google_invalid_client,
+        );
+      } else if (error.toString().contains('timeout')) {
+        throw BaseException(message: AppLocalizations.current.google_timeout);
+      } else if (error.toString().contains('SERVICE_DISABLED') ||
+          error.toString().contains('SERVICE_MISSING') ||
+          error.toString().contains('SERVICE_VERSION_UPDATE_REQUIRED')) {
+        throw BaseException(
+          message: AppLocalizations.current.google_play_services_not_available,
+        );
+      }
+
+      // Re-throw với message chi tiết
+      throw BaseException(
+        message: error.toString(),
+        code: "google_error_other",
+      );
+    }
+  }
+
+  /// Đăng nhập bằng Facebook.
+  /// Hỗ trợ cả Classic Login (có Graph API) và Limited Login (iOS 14.5+ opt-out tracking).
+  static Future<Map<String, dynamic>?> signInWithFacebook() async {
+    try {
+      print('Running on platform: ${Platform.operatingSystem}');
+      print('Running on simulator: $isSimulator');
+
+      if (isSimulator) {
+        print('⚠️ WARNING: Running on iOS Simulator');
+      }
+
+      print('🔐 Starting Facebook login...');
+      final LoginResult result = await FacebookAuth.instance.login(
+        permissions: ['email', 'public_profile'],
+      );
+
+      if (result.status != LoginStatus.success) {
+        print('❌ Facebook login failed with status: ${result.status}');
+        throw BaseException(
+          message: AppLocalizations.current.facebook_login_failed,
+        );
+      }
+
+      final token = result.accessToken;
+
+      if (token == null) {
+        throw BaseException(
+          message: AppLocalizations.current.facebook_access_token_is_null,
+        );
+      }
+
+      // Classic Login — user cho phép tracking, token dùng được với Graph API
+      if (token is ClassicToken) {
+        final userData = await FacebookAuth.instance.getUserData();
+        print('✅ Facebook Classic login: ${userData['email']}');
+        return {
+          'platformId': userData['id'],
+          'email': userData['email'] ?? '',
+          'fullName': userData['name'] ?? '',
+          'picture': userData['picture']?['data']?['url'],
+          'platform': 'facebook',
+          'accessToken': token.tokenString,
+          'tokenType': 'classic',
+        };
+      }
+
+      // Limited Login — user từ chối tracking (iOS 14.5+)
+      // Token là JWT (OIDC), không dùng được với Graph API
+      // Backend sẽ verify qua Facebook JWKS endpoint
+      if (token is LimitedToken) {
+        print(
+          'ℹ️ Facebook Limited Login (ATT opt-out): userId=${token.userId}',
+        );
+        return {
+          'platformId': token.userId,
+          'email': '',
+          'fullName': '',
+          'platform': 'facebook',
+          'accessToken': token.tokenString,
+          'tokenType': 'limited',
+          'nonce': token.nonce,
+        };
+      }
+
+      throw BaseException(
+        message: AppLocalizations.current.facebook_access_token_is_null,
+      );
+    } catch (error) {
+      if (error is BaseException) rethrow;
+
+      if (error.toString().contains('AX Lookup problem') ||
+          error.toString().contains('Permission denied portName') ||
+          error.toString().contains('com.apple.iphone.axserver')) {
+        throw BaseException(
+          message: AppLocalizations.current.facebook_login_failed,
+        );
+      } else if (error.toString().contains('network_error') ||
+          error.toString().contains('SocketBaseException') ||
+          error.toString().contains('Network is unreachable')) {
+        throw BaseException(
+          message: AppLocalizations.current.facebook_network_error,
+        );
+      } else if (error.toString().contains('invalid_client') ||
+          error.toString().contains('FacebookAppID')) {
+        throw BaseException(
+          message: AppLocalizations.current.facebook_invalid_client,
+        );
+      }
+
+      rethrow;
+    }
+  }
+
+  /// Đăng nhập bằng Apple
+  static Future<Map<String, dynamic>?> signInWithApple() async {
+    try {
+      final AuthorizationCredentialAppleID credential =
+          await SignInWithApple.getAppleIDCredential(
+            scopes: [
+              AppleIDAuthorizationScopes.email,
+              AppleIDAuthorizationScopes.fullName,
+            ],
+          );
+
+      return {
+        'platformId': credential.userIdentifier,
+        'email': credential.email ?? '',
+        'fullName':
+            credential.givenName != null
+                ? '${credential.givenName} ${credential.familyName}'
+                : '',
+        'platform': 'apple',
+        'accessToken':
+            credential
+                .identityToken, // Dùng identityToken làm accessToken để verify ở backend
+      };
+    } catch (error) {
+      print('❌ Apple Sign-In Error: $error');
+      if (error is SignInWithAppleAuthorizationException) {
+        if (error.code == AuthorizationErrorCode.canceled) {
+          return null;
+        }
+      }
+      rethrow;
+    }
+  }
+
+  /// Đăng xuất Google
+  static Future<void> signOutGoogle() async {
+    await _googleSignIn.signOut();
+  }
+
+  /// Đăng xuất Facebook
+  static Future<void> signOutFacebook() async {
+    await FacebookAuth.instance.logOut();
+  }
+
+  /// Đăng xuất tất cả social accounts
+  static Future<void> signOutAll() async {
+    await Future.wait([signOutGoogle(), signOutFacebook()]);
+  }
+}

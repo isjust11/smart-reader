@@ -1,0 +1,639 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:readbox/blocs/auth/auth_cubit.dart';
+import 'package:readbox/blocs/base_bloc/base_state.dart';
+import 'package:readbox/blocs/cubit.dart';
+import 'package:readbox/config/theme_data.dart';
+import 'package:readbox/domain/repositories/repositories.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/injection_container.dart';
+import 'package:readbox/res/dimens.dart';
+import 'package:readbox/routes.dart';
+import 'package:readbox/ui/widget/widget.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<AuthCubit>(
+      create: (_) => AuthCubit(repository: getIt.get<AuthRepository>()),
+      child: RegisterBody(),
+    );
+  }
+}
+
+class RegisterBody extends StatefulWidget {
+  const RegisterBody({super.key});
+
+  @override
+  RegisterScreenState createState() => RegisterScreenState();
+}
+
+class RegisterScreenState extends State<RegisterBody>
+    with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 1000),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _fullNameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _handleRegister() {
+    if (_formKey.currentState?.validate() ?? false) {
+      // unfocus keyboard
+      FocusManager.instance.primaryFocus?.unfocus();
+      BlocProvider.of<AuthCubit>(context).doRegister(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        fullName: _fullNameController.text.trim(),
+        password: _passwordController.text,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 1024;
+    const double headerMaxWidth = 420;
+    const double formMaxWidth = 520;
+
+    return BaseScreen<AuthCubit>(
+      hideAppBar: true,
+      autoHandleState: true,
+      useSafeAreaTop: false,
+      useSafeAreaBottom: false,
+      onStateChanged: (context, state) {
+        if (state is LoadedState) {
+          // Navigate to confirm PIN screen with email
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.confirmPinScreen,
+            arguments: _emailController.text.trim(),
+          );
+        }
+      },
+      body: BlocListener<AuthCubit, BaseState>(
+        listener: (context, state) {
+          if (state is LoadedState) {
+            // Navigate to confirm PIN screen with email
+            Navigator.pushReplacementNamed(
+              context,
+              Routes.confirmPinScreen,
+              arguments: _emailController.text.trim(),
+            );
+          }
+        },
+        child: Stack(
+          children: [
+            // Gradient Background
+            Container(
+              decoration: BoxDecoration(
+                gradient: AppTheme.indigoCyanGradient(),
+              ),
+            ),
+
+            // Main Content
+            SafeArea(
+              child: Column(
+                children: [
+                  // Back Button
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ),
+
+                  // Scrollable Content
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child:
+                              isLargeScreen
+                                  ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: headerMaxWidth,
+                                        child: _buildHeader(),
+                                      ),
+                                      const SizedBox(width: 32),
+                                      SizedBox(
+                                        width: formMaxWidth,
+                                        child: _buildRegisterCard(),
+                                      ),
+                                    ],
+                                  )
+                                  : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Header
+                                      _buildHeader(),
+                                      SizedBox(height: AppDimens.SIZE_24),
+                                      // Register Card
+                                      _buildRegisterCard(),
+                                    ],
+                                  ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        // Icon
+        Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.person_add_rounded,
+            size: 50,
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+        SizedBox(height: AppDimens.SIZE_16),
+        // Title
+        BaseShaderMask(
+          colors: [cs.primary, cs.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          child: Center(
+            child: Text(
+              AppLocalizations.current.create_new_account,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRegisterCard() {
+    return Card(
+      elevation: 12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Container(
+        padding: EdgeInsets.all(AppDimens.SIZE_16),
+        child: Column(
+          children: [
+            SizedBox(height: AppDimens.SIZE_8),
+            // Title
+            Text(
+              AppLocalizations.current.enter_information_to_start,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: AppDimens.SIZE_16),
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Full Name Field
+                  _buildFullNameField(),
+                  SizedBox(height: 12),
+
+                  // Username Field
+                  _buildUsernameField(),
+                  SizedBox(height: 12),
+
+                  // Email Field
+                  _buildEmailField(),
+                  SizedBox(height: 12),
+
+                  // Password Field
+                  _buildPasswordField(),
+                  SizedBox(height: 12),
+
+                  // Confirm Password Field
+                  _buildConfirmPasswordField(),
+                  SizedBox(height: 24),
+
+                  // Register Button
+                  _buildRegisterButton(),
+                  SizedBox(height: 16),
+
+                  // Login Link
+                  _buildLoginLink(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullNameField() {
+    return TextFormField(
+      controller: _fullNameController,
+      decoration: InputDecoration(
+        labelText: AppLocalizations.current.full_name,
+        hintText: AppLocalizations.current.enter_full_name,
+        prefixIcon: Icon(
+          Icons.badge_outlined,
+          color: Theme.of(context).primaryColor,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red.shade300),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return AppLocalizations.current.please_enter_full_name;
+        }
+        return null;
+      },
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  Widget _buildUsernameField() {
+    return TextFormField(
+      controller: _usernameController,
+      style: TextStyle(color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: AppLocalizations.current.username,
+        hintText: AppLocalizations.current.enter_username,
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        labelStyle: TextStyle(color: Colors.grey.shade700),
+        prefixIcon: Icon(
+          Icons.person_outline,
+          color: Theme.of(context).primaryColor,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red.shade300),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return AppLocalizations.current.please_enter_username;
+        }
+        if (value.length < 3) {
+          return AppLocalizations
+              .current
+              .username_must_be_at_least_3_characters;
+        }
+        return null;
+      },
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  Widget _buildEmailField() {
+    return TextFormField(
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      style: TextStyle(color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: AppLocalizations.current.email,
+        hintText: AppLocalizations.current.enter_email,
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        labelStyle: TextStyle(color: Colors.grey.shade700),
+        prefixIcon: Icon(
+          Icons.email_outlined,
+          color: Theme.of(context).primaryColor,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red.shade300),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return AppLocalizations.current.please_enter_email;
+        }
+        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+          return AppLocalizations.current.invalid_email;
+        }
+        return null;
+      },
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      controller: _passwordController,
+      obscureText: _obscurePassword,
+      style: TextStyle(color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: AppLocalizations.current.password,
+        hintText: AppLocalizations.current.enter_password,
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        labelStyle: TextStyle(color: Colors.grey.shade700),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: Theme.of(context).primaryColor,
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            color: Colors.grey.shade600,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red.shade300),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return AppLocalizations.current.please_enter_password;
+        }
+        if (value.length < 6) {
+          return AppLocalizations
+              .current
+              .password_must_be_at_least_6_characters;
+        }
+        return null;
+      },
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  Widget _buildConfirmPasswordField() {
+    return TextFormField(
+      controller: _confirmPasswordController,
+      obscureText: _obscureConfirmPassword,
+      style: TextStyle(color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: AppLocalizations.current.confirm_password,
+        hintText: AppLocalizations.current.enter_confirm_password,
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        labelStyle: TextStyle(color: Colors.grey.shade700),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: Theme.of(context).primaryColor,
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscureConfirmPassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            color: Colors.grey.shade600,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscureConfirmPassword = !_obscureConfirmPassword;
+            });
+          },
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red.shade300),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return AppLocalizations.current.please_enter_confirm_password;
+        }
+        if (value != _passwordController.text) {
+          return AppLocalizations.current.passwords_do_not_match;
+        }
+        return null;
+      },
+      onFieldSubmitted: (_) => _handleRegister(),
+    );
+  }
+
+  Widget _buildRegisterButton() {
+    return ElevatedButton(
+      onPressed: _handleRegister,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        padding: EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shadowColor: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            AppLocalizations.current.register,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          SizedBox(width: 8),
+          Icon(Icons.arrow_forward_rounded, size: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          '${AppLocalizations.current.have_account} ',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            AppLocalizations.current.login,
+            style: TextStyle(
+              color: Theme.of(context).primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

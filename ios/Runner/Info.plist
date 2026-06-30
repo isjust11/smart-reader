@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Smart Reader</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>smart_reader</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.readbox.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>readbox</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>facebook</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb884129041238432</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.534175741610-44bsn5bprdk2aahkl86k8ln36ckqe62g</string>
+			</array>
+		</dict>
+	</array>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+	<key>FacebookAppID</key>
+	<string>884129041238432</string>
+	<key>FacebookClientToken</key>
+	<string>fa9a622a5b0786ac54a76767a2118bcb</string>
+	<key>FacebookDisplayName</key>
+	<string>ReadBox</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Readbox cần truy cập Camera để bạn có thể chụp ảnh trực tiếp làm ảnh đại diện hoặc quét tài liệu PDF.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Readbox cần truy cập thư viện ảnh để bạn có thể chọn ảnh đại diện từ máy và tải lên các tài liệu sách cá nhân.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Readbox cần truy cập thư mục tài liệu để tìm và nhập các file sách PDF, EPUB vào ứng dụng.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Readbox cần quyền nhận diện giọng nói để hỗ trợ tính năng tìm kiếm bằng giọng nói và điều khiển đọc sách.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Readbox cần truy cập Microphone để hỗ trợ bạn thực hiện các lệnh điều khiển bằng giọng nói.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses the local network to connect to the development tools when debugging from your computer.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dartobservatory._tcp</string>
+		<string>_services._dns-sd._udp</string>
+	</array>
+
+	<key>NSFaceIDUsageDescription</key>
+	<string>Ứng dụng cần quyền sử dụng Face ID để xác thực đăng nhập bảo mật.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3618888231032837~8508028054</string>
+</dict>
+</plist>

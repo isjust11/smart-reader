@@ -1,0 +1,120 @@
+import 'package:readbox/domain/data/entities/entities.dart';
+
+class CategoryModel extends CategoryEntity {
+  CategoryModel({
+    super.id,
+    super.name,
+    super.description,
+    super.icon,
+    super.iconType,
+    super.iconSize,
+    super.className,
+    super.isActive,
+    super.code,
+    super.allowEdit,
+    super.categoryTypeId,
+    super.sortOrder,
+    super.isDefault,
+    super.createBy,
+    super.createdAt,
+    super.updatedAt,
+    super.nameEN,
+    super.descriptionEN,
+    super.parentId,
+    super.parent,
+    super.children,
+    super.image,
+    super.color,
+  });
+
+  factory CategoryModel.fromJson(Map<String, dynamic> json) {
+    return CategoryModel(
+      id: json['id']?.toString(),
+      name: json['name']?.toString(),
+      description: json['description']?.toString(),
+      icon: json['icon']?.toString(),
+      iconType: json['iconType']?.toString(),
+      iconSize: json['iconSize']?.toString(),
+      className: json['className']?.toString(),
+      isActive: json['isActive'],
+      code: json['code']?.toString(),
+      allowEdit: json['allowEdit'],
+      categoryTypeId: json['categoryTypeId']?.toString(),
+      sortOrder: json['sortOrder']?.toInt(),
+      isDefault: json['isDefault'],
+      createBy: json['createBy']?.toString(),
+      createdAt: json['createdAt']?.toString(),
+      updatedAt: json['updatedAt']?.toString(),
+      nameEN: json['nameEN']?.toString(),
+      descriptionEN: json['descriptionEN']?.toString(),
+      parentId: json['parentId']?.toString(),
+      parent: json['parent'] is Map<String, dynamic>
+          ? CategoryModel.fromJson(json['parent'] as Map<String, dynamic>)
+          : null,
+      children: json['children'] is List
+          ? (json['children'] as List)
+              .whereType<Map<String, dynamic>>()
+              .map(CategoryModel.fromJson)
+              .toList()
+          : null,
+      image: json['image']?.toString(),
+      color: json['color']?.toString(),
+    );
+  }
+
+  factory CategoryModel.fromEntity(CategoryEntity entity) {
+    return CategoryModel(
+      id: entity.id,
+      name: entity.name,
+      description: entity.description,
+      icon: entity.icon,
+      iconType: entity.iconType,
+      iconSize: entity.iconSize,
+      className: entity.className,
+      isActive: entity.isActive,
+      code: entity.code,
+      allowEdit: entity.allowEdit,
+      categoryTypeId: entity.categoryTypeId,
+      sortOrder: entity.sortOrder,
+      isDefault: entity.isDefault,
+      createBy: entity.createBy,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      nameEN: entity.nameEN,
+      descriptionEN: entity.descriptionEN,
+      parentId: entity.parentId,
+      parent: entity.parent,
+      children: entity.children,
+      image: entity.image,
+      color: entity.color,
+    );
+  }
+
+  CategoryEntity toEntity() {
+    return CategoryEntity(
+      id: id,
+      name: name,
+      description: description,
+      icon: icon,
+      iconType: iconType,
+      iconSize: iconSize,
+      className: className,
+      isActive: isActive,
+      code: code,
+      allowEdit: allowEdit,
+      categoryTypeId: categoryTypeId,
+      sortOrder: sortOrder,
+      isDefault: isDefault,
+      createBy: createBy,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      nameEN: nameEN,
+      descriptionEN: descriptionEN,
+      parentId: parentId,
+      parent: parent,
+      children: children,
+      image: image,
+      color: color,
+    );
+  }
+}

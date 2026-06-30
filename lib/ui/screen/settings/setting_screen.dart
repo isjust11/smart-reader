@@ -1,0 +1,702 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:readbox/blocs/base_bloc/base.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
+import 'package:readbox/res/colors.dart';
+import 'package:readbox/res/dimens.dart';
+import 'package:readbox/res/enum.dart';
+import 'package:readbox/services/services.dart';
+import 'package:readbox/ui/widget/app_widgets/app_profile.dart';
+import 'package:readbox/ui/widget/base_screen.dart';
+import 'package:readbox/ui/widget/custom_snack_bar.dart';
+import 'package:readbox/ui/widget/custom_text_label.dart';
+import 'package:readbox/routes.dart';
+import 'package:readbox/blocs/cubit.dart';
+import 'package:light_dark_theme_toggle/light_dark_theme_toggle.dart';
+import 'package:readbox/domain/data/models/models.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+class SettingScreen extends StatefulWidget {
+  final UserModel? user;
+  const SettingScreen({super.key, this.user});
+
+  @override
+  State<SettingScreen> createState() => _SettingScreenState();
+}
+
+class _SettingScreenState extends State<SettingScreen> {
+  bool themeMode = true;
+  bool _notificationsEnabled = true;
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+  String _appVersion = '';
+  bool _isPrivacyOptionsRequired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricStatus();
+    _loadNotificationStatus();
+    _loadAppVersion();
+    _loadThemeStatus();
+    _checkPrivacyOptions();
+  }
+
+  Future<void> _checkPrivacyOptions() async {
+    try {
+      final status =
+          await ConsentInformation.instance
+              .getPrivacyOptionsRequirementStatus();
+      setState(() {
+        _isPrivacyOptionsRequired =
+            status == PrivacyOptionsRequirementStatus.required;
+      });
+    } catch (e) {
+      debugPrint('Error checking privacy options: $e');
+    }
+  }
+
+  Future<void> _loadBiometricStatus() async {
+    final capability = await BiometricAuthService.checkBiometricCapability();
+    final enabled = await BiometricAuthService.isBiometricEnabledInApp();
+
+    setState(() {
+      _biometricAvailable = capability == BiometricCapability.available;
+      _biometricEnabled = enabled;
+    });
+  }
+
+  Future<void> _loadNotificationStatus() async {
+    final fcmService = FCMService();
+    setState(() {
+      _notificationsEnabled = fcmService.notificationsEnabled;
+    });
+  }
+
+  Future<void> _loadThemeStatus() async {
+    final themeCubit = context.read<ThemeCubit>();
+    setState(() {
+      themeMode = themeCubit.state.themeMode == 'light';
+    });
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = '${packageInfo.version} ${packageInfo.buildNumber}';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BlocListener<AuthCubit, BaseState>(
+      listener: (context, state) {
+        if (state is LoadedState) {
+          final data = state.data;
+          if (data is Map && data['isDeleted'] == true) {
+            context.read<UserSubscriptionCubit>().clear();
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil(Routes.loginScreen, (route) => false);
+          }
+        }
+      },
+      child: BaseScreen(
+        hideAppBar: true,
+        useSafeAreaTop: false,
+        colorBg: theme.colorScheme.surface,
+        body: _buildLayoutSection(context, theme),
+        floatingButton: _buildFloatingButton(),
+      ),
+    );
+  }
+
+  Widget _buildLayoutSection(BuildContext context, ThemeData theme) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppProfile(user: widget.user, settingScreen: true),
+          // const SizedBox(height: AppDimens.SIZE_12),
+          // _buildQuickActions(),
+          const SizedBox(height: AppDimens.SIZE_12),
+          _buildUsageAndPayment(context),
+          const SizedBox(height: AppDimens.SIZE_12),
+          _buildReadBookSection(context),
+          const SizedBox(height: AppDimens.SIZE_12),
+          _buildSettingsSection(context),
+          const SizedBox(height: AppDimens.SIZE_12),
+          _buildSupportSection(context),
+          const SizedBox(height: AppDimens.SIZE_12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingButton() {
+    return FloatingActionButton(
+      backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 1),
+      onPressed: () {
+        Navigator.of(context).pop();
+      },
+      child: Icon(
+        Icons.arrow_back_ios_new,
+        color: Theme.of(context).colorScheme.onPrimary,
+        size: AppDimens.SIZE_18,
+      ),
+    );
+  }
+
+  // Widget _buildQuickActions() {
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: _buildQuickActionCard(
+  //             icon: Icons.edit,
+  //             title: AppLocalizations.current.editProfile,
+  //             subtitle: AppLocalizations.current.updateYourInfo,
+  //             color: Theme.of(context).colorScheme.primary,
+  //             onTap: () {
+  //               Navigator.of(context).pushNamed(Routes.editProfile);
+  //             },
+  //           ),
+  //         ),
+  //         const SizedBox(width: 12),
+  //         Expanded(
+  //           child: _buildQuickActionCard(
+  //             icon: Icons.security,
+  //             title: AppLocalizations.current.security,
+  //             subtitle: AppLocalizations.current.privacySettings,
+  //             color: Colors.green,
+  //             onTap: () {
+  //               Navigator.of(context).pushNamed(Routes.privacySecurityScreen);
+  //             },
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.SIZE_12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: AppDimens.SIZE_10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppDimens.SIZE_12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+              ),
+              child: Icon(icon, color: color, size: AppDimens.SIZE_24),
+            ),
+            const SizedBox(height: AppDimens.SIZE_12),
+            CustomTextLabel(
+              title,
+              fontWeight: FontWeight.w600,
+              fontSize: AppDimens.SIZE_14,
+              color:
+                  Theme.of(context).textTheme.bodyLarge?.color ??
+                  AppColors.colorTitle,
+            ),
+            const SizedBox(height: AppDimens.SIZE_4),
+            CustomTextLabel(
+              subtitle,
+              fontSize: AppDimens.SIZE_12,
+              color:
+                  Theme.of(context).textTheme.bodyMedium?.color ??
+                  AppColors.colorTitle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build setting readbook section
+  Widget _buildUsageAndPayment(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+      ),
+      child: Column(
+        children: [
+          _buildSettingItem(
+            icon: Icons.pie_chart,
+            title: AppLocalizations.current.usage_statistics,
+            subtitle: AppLocalizations.current.usage_statistics_detail,
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.dataStorageScreen);
+            },
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.history,
+            title: AppLocalizations.current.payment,
+            subtitle: AppLocalizations.current.payment_history,
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.paymentHistoryScreen);
+            },
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build setting readbook section
+  Widget _buildReadBookSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+      ),
+      child: Column(
+        children: [
+          _buildSettingItem(
+            icon: Icons.translate_outlined,
+            title: AppLocalizations.current.translate,
+            subtitle: AppLocalizations.current.changeAppLanguage,
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.translateScreen);
+            },
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.text_snippet_outlined,
+            title: AppLocalizations.current.textToSpeech,
+            subtitle: AppLocalizations.current.convertTextToSpeech,
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.textToSpeechSettingScreen);
+            },
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textDark.withValues(alpha: 0.05),
+            blurRadius: AppDimens.SIZE_10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildSettingItem(
+            icon: Icons.language,
+            title: AppLocalizations.current.language,
+            subtitle: AppLocalizations.current.changeAppLanguage,
+            trailing: _buildLanguageDropdown(context),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.format_paint,
+            title: AppLocalizations.current.appearance,
+            subtitle: AppLocalizations.current.appearance_description,
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.themeCustomizationScreen);
+            },
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.notifications,
+            title: AppLocalizations.current.notifications,
+            subtitle: AppLocalizations.current.manageNotifications,
+            trailing: Switch(
+              value: _notificationsEnabled,
+              onChanged: (value) async {
+                final fcmService = FCMService();
+                final success = await fcmService.toggleNotifications(value);
+
+                if (success) {
+                  setState(() {
+                    _notificationsEnabled = value;
+                  });
+                } else {
+                  // Nếu không thành công (system permission bị denied)
+                  setState(() {
+                    _notificationsEnabled = false;
+                  });
+
+                  if (mounted) {
+                    // Hiển thị dialog hướng dẫn user vào Settings
+                    _showPermissionDeniedDialog();
+                  }
+                }
+              },
+              activeColor: Theme.of(context).primaryColor,
+            ),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.fingerprint,
+            title: AppLocalizations.current.biometricLogin,
+            subtitle: _getBiometricSubtitle(),
+            trailing: Switch(
+              value: _biometricEnabled,
+              onChanged: _biometricAvailable ? _onBiometricToggle : null,
+              activeColor: Theme.of(context).primaryColor,
+            ),
+          ),
+          if (_isPrivacyOptionsRequired) ...[
+            _buildDivider(),
+            _buildSettingItem(
+              icon: Icons.privacy_tip_outlined,
+              title: AppLocalizations.current.privacySettings,
+              subtitle: AppLocalizations.current.privacySettings_description,
+              trailing: Icon(
+                Icons.arrow_forward_ios,
+                size: AppDimens.SIZE_16,
+                color: Theme.of(context).primaryColor,
+              ),
+              onTap: () {
+                ConsentForm.showPrivacyOptionsForm((formError) {
+                  if (formError != null) {
+                    _showErrorMessage(formError.message);
+                  }
+                });
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: AppDimens.SIZE_10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildSettingItem(
+            icon: Icons.feedback,
+            title: AppLocalizations.current.sendFeedback,
+            subtitle: AppLocalizations.current.shareYourThoughts,
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Theme.of(context).primaryColor,
+            ),
+            onTap: () {
+              Navigator.of(context).pushNamed(Routes.feedbackScreen);
+            },
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.info_outline,
+            title: AppLocalizations.current.aboutApp,
+            subtitle: '${AppLocalizations.current.version} $_appVersion',
+            trailing: SizedBox(),
+          ),
+          _buildDivider(),
+          _buildSettingItem(
+            icon: Icons.person_remove_outlined,
+            title: AppLocalizations.current.delete_account,
+            subtitle: AppLocalizations.current.delete_account_description,
+            onTap: _showDeleteAccountConfirmation,
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: AppDimens.SIZE_16,
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountConfirmation() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(AppLocalizations.current.delete_account),
+            content: Text(AppLocalizations.current.delete_account_confirm),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppLocalizations.current.cancel),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AuthCubit>().deleteAccount(
+                    widget.user?.id ?? '',
+                  );
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: Text(AppLocalizations.current.delete),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimens.SIZE_12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.SIZE_20,
+          vertical: AppDimens.SIZE_12,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppDimens.SIZE_8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+              ),
+              child: Icon(
+                icon,
+                color: Theme.of(context).primaryColor,
+                size: AppDimens.SIZE_20,
+              ),
+            ),
+            const SizedBox(width: AppDimens.SIZE_16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomTextLabel(
+                    title,
+                    fontWeight: FontWeight.w600,
+                    fontSize: AppDimens.SIZE_16,
+                    color:
+                        Theme.of(context).textTheme.bodyLarge?.color ??
+                        AppColors.colorTitle,
+                  ),
+                  const SizedBox(height: 2),
+                  CustomTextLabel(
+                    subtitle,
+                    fontSize: AppDimens.SIZE_14,
+                    color:
+                        Theme.of(context).textTheme.bodyMedium?.color ??
+                        AppColors.colorTitle,
+                  ),
+                ],
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 1,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+    );
+  }
+
+  Widget _buildLanguageDropdown(BuildContext context) {
+    return BlocBuilder<AppCubit, String>(
+      builder: (context, lang) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppDimens.SIZE_12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppDimens.SIZE_8),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: DropdownButton<String>(
+            value: lang,
+            underline: const SizedBox(),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              color: Theme.of(context).primaryColor,
+            ),
+            items: const [
+              DropdownMenuItem(value: 'vi', child: Text('Tiếng Việt')),
+              DropdownMenuItem(value: 'en', child: Text('English')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                context.read<AppCubit>().changeLanguage(value);
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  String _getBiometricSubtitle() {
+    if (!_biometricAvailable) {
+      return AppLocalizations.current.biometricNotAvailable;
+    }
+    return AppLocalizations.current.useFingerprintOrFaceID;
+  }
+
+  Future<void> _onBiometricToggle(bool value) async {
+    if (value) {
+      await _enableBiometric();
+    } else {
+      _disableBiometric();
+    }
+  }
+
+  Future<void> _enableBiometric() async {
+    try {
+      // Kiểm tra xem có thông tin đăng nhập nào không
+      final credentials = await BiometricAuthService.getStoredCredentials();
+      final socialInfo = await BiometricAuthService.getStoredSocialLoginInfo();
+
+      if (credentials != null || socialInfo != null) {
+        // Bật sinh trắc học trong app
+        await BiometricAuthService.setBiometricEnabledInApp(true);
+
+        setState(() {
+          _biometricEnabled = true;
+        });
+
+        _showSuccessMessage(AppLocalizations.current.biometricSetupSuccess);
+      } else {
+        throw Exception(AppLocalizations.current.noLoginInfo);
+      }
+    } catch (e) {
+      _showErrorMessage(e.toString());
+    }
+  }
+
+  Future<void> _disableBiometric() async {
+    try {
+      await BiometricAuthService.setBiometricEnabledInApp(false);
+
+      setState(() {
+        _biometricEnabled = false;
+      });
+
+      _showSuccessMessage(AppLocalizations.current.biometricDisabled);
+    } catch (e) {
+      _showErrorMessage(e.toString());
+    }
+  }
+
+  void _showSuccessMessage(String message) {
+    AppSnackBar.show(
+      context,
+      message: message,
+      snackBarType: SnackBarType.success,
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    AppSnackBar.show(
+      context,
+      message: message,
+      snackBarType: SnackBarType.error,
+    );
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Notification Permission Required'),
+            content: Text(
+              'Please enable notifications in your device settings to receive notifications from ReadBox.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppLocalizations.current.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // TODO: Mở Settings app (cần package như app_settings)
+                  // AppSettings.openAppSettings();
+                },
+                child: Text('Open Settings'),
+              ),
+            ],
+          ),
+    );
+  }
+}
