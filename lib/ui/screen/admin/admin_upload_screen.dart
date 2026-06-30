@@ -333,7 +333,7 @@ class AdminUploadBodyState extends State<AdminUploadBody> {
     if (isEditMode) {
       // upload cover ebook
       if (_coverImageFile != null) {
-        await cubit.uploadCoverImageInternal(_coverImageFile!);
+        // await cubit.uploadCoverImageInternal(_coverImageFile!);
       }
       await cubit.updateBook(
         bookId: widget.book.id!,

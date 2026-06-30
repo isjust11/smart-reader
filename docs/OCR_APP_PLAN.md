@@ -20,8 +20,9 @@ Ngôn ngữ OCR: **vi + en** (auto-detect). Realtime trạng thái qua **Socket.
 
 ## 0.1 Tích hợp backend
 
-- `POST /ocr/jobs` (multipart file + `lang`) → `{ jobId, status }`.
-- `GET /ocr/jobs`, `GET /ocr/jobs/:id`, `GET /ocr/jobs/:id/result?page=`.
+- `POST /ocr/jobs` (multipart file + `lang` + `extractImages`) → `{ jobId, status }`.
+- `GET /ocr/jobs`, `GET /ocr/jobs/:id`, `GET /ocr/jobs/:id/result?page=` (kèm `images[]`, `tables[]`).
+- `GET /ocr/jobs/:id/assets?page=&type=` (ảnh/figure/table đã tách).
 - `POST /ocr/jobs/:id/export`.
 - Socket event `ocr.job.updated` để cập nhật tiến độ.
 
@@ -38,9 +39,9 @@ Ngôn ngữ OCR: **vi + en** (auto-detect). Realtime trạng thái qua **Socket.
 
 ## Phase 2 — Domain layer OCR (P4)
 
-- [ ] Entities: `OcrJobEntity { id, fileName, lang, status, totalPages, processedPages, createdAt }`, `OcrPageEntity { page, width, height, List<OcrLine> }`, `OcrLine { text, confidence, List<Offset> bbox }`.
-- [ ] `ocr_remote_data_source.dart` — gọi các endpoint `/ocr/...`.
-- [ ] `ocr_repository.dart` — `createJob(file, lang)`, `getJobs(params)`, `getJob(id)`, `getResult(id, page)`, `export(id, format)`.
+- [ ] Entities: `OcrJobEntity { id, fileName, lang, status, totalPages, processedPages, createdAt }`, `OcrPageEntity { page, width, height, List<OcrLine> lines, List<OcrAsset> images, List<OcrAsset> tables }`, `OcrLine { text, confidence, List<Offset> bbox }`, `OcrAsset { type(image|figure|table), List<Offset> bbox, imageUrl, tableHtml? }`.
+- [ ] `ocr_remote_data_source.dart` — gọi các endpoint `/ocr/...` (gồm `getAssets(id, page, type)`).
+- [ ] `ocr_repository.dart` — `createJob(file, lang, extractImages)`, `getJobs(params)`, `getJob(id)`, `getResult(id, page)`, `getAssets(id, page)`, `export(id, format)`.
 - [ ] Khai báo endpoint trong `api_constant.dart`.
 - **DoD:** Repository trả về model parse đúng từ JSON.
 
@@ -69,6 +70,16 @@ Ngôn ngữ OCR: **vi + en** (auto-detect). Realtime trạng thái qua **Socket.
 - [ ] Lazy-load kết quả theo trang đang xem.
 - **DoD:** Đọc được tài liệu scan, overlay đúng vị trí, TTS + dịch hoạt động.
 
+## Phase 5b — Hiển thị ảnh / figure / table đã tách (P5)
+
+- [ ] Trên trang gốc: vẽ **khung figure/table** (bbox `images[]`/`tables[]`) phân biệt màu với khung text; tap khung → mở ảnh full.
+- [ ] Tab **"Hình ảnh"** trong `OcrViewerScreen`: lưới (grid) các ảnh đã tách của tài liệu (dùng `OcrAsset.imageUrl`), tải qua `getAssets`.
+- [ ] Cho phép **lưu/chia sẻ ảnh** (tái dùng `share_plus`), zoom ảnh.
+- [ ] Với `table`: hiển thị bảng từ `tableHtml` (render HTML) hoặc ảnh crop; cho copy.
+- [ ] Khi đọc liền mạch (TTS): chèn ảnh figure đúng vị trí giữa các đoạn text (theo thứ tự bbox trên trang).
+- [ ] `extractImages` bật/tắt ở màn Upload (mặc định bật).
+- **DoD:** Trang có hình → app hiển thị figure/table tách riêng, xem/lưu/chia sẻ được, đúng vị trí trên trang.
+
 ## Phase 6 — Export & hoàn thiện (P6)
 
 - [ ] Xuất `.txt` / **searchable PDF** (gọi export API) + chia sẻ file.
@@ -93,7 +104,7 @@ lib/
 │   └── network/         (network_impl.dart, api_constant.dart)
 ├── ui/
 │   ├── screen/  (upload, job_list, ocr_viewer)
-│   └── widget/  (job_card, bbox_overlay, status_badge)
+│   └── widget/  (job_card, bbox_overlay, status_badge, asset_grid, figure_overlay, table_view)
 ├── res/         (colors.dart, dimens.dart)
 ├── services/    (socket_service.dart, fcm_service.dart, tts_service.dart)
 └── injection_container.dart
@@ -101,7 +112,8 @@ lib/
 
 ## Ghi chú kỹ thuật
 
-- **Overlay bbox**: toạ độ bbox theo ảnh OCR; scale = kích thước render trên màn / kích thước ảnh OCR (`width/height`).
+- **Overlay bbox**: toạ độ bbox theo ảnh OCR; scale = kích thước render trên màn / kích thước ảnh OCR (`width/height`). Áp dụng cùng cách scale cho cả khung text lẫn khung figure/table.
+- **Ảnh đã tách**: lấy từ S3 qua `imageUrl`; cache bằng `cached_network_image` (tái dùng từ Readbox).
 - **Bất đồng bộ**: kết quả luôn lưu server theo `jobId`; app không phụ thuộc việc giữ socket — mở lại lấy theo `jobId`.
 - **Tái dùng từ Readbox**: pattern Dio/refresh-token, TTS service, language detector, AI repository — copy & rút gọn cho app OCR.
 - **Gói tham khảo**: `dio`, `flutter_bloc`, `get_it`, `equatable`, `flutter_dotenv`, `flutter_secure_storage`, `file_picker`, `socket_io_client`, `flutter_tts`, `flutter_langdetect`.

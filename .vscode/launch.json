@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "readbox (iPhone Just😉 - Debug)",
+            "name": "smart-reader (iPhone Just😉 - Debug)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
@@ -16,7 +16,7 @@
             ]
         },
         {
-            "name": "readbox (Development)",
+            "name": "smart-reader (Development)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
@@ -26,7 +26,7 @@
             ]
         },
         {
-            "name": "readbox (Production)",
+            "name": "smart-reader (Production)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
@@ -36,14 +36,14 @@
             ]
         },
         {
-            "name": "readbox (profile mode)",
+            "name": "smart-reader (profile mode)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "flutterMode": "profile"
         },
         {
-            "name": "readbox (release mode)",
+            "name": "smart-reader (release mode)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
