@@ -96,6 +96,7 @@ dependencies:
   lucide_icons_flutter: ^3.1.13
   epubx: ^4.0.0
   google_mobile_ads: ^6.0.0
+  socket_io_client: ^2.0.3+1
 
 dependency_overrides:
   archive: ^3.6.1

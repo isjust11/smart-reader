@@ -8,6 +8,7 @@ import 'package:readbox/res/dimens.dart';
 import 'package:readbox/routes.dart';
 import 'package:readbox/ui/screen/tools/word_to_pdf_converter_screen.dart';
 import 'package:readbox/ui/screen/tools/document_scanner_screen.dart';
+import 'package:readbox/ui/screen/ocr/ocr_upload_screen.dart';
 import 'package:readbox/ui/widget/base_screen.dart';
 
 class ToolsScreen extends StatelessWidget {
@@ -116,6 +117,36 @@ class ToolsScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const DocumentScannerScreen(),
+                  ),
+                );
+              },
+              isPro: false,
+            ),
+            _ToolCard(
+              widgetIcon: Container(
+                padding: const EdgeInsets.all(AppDimens.SIZE_12),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.text_snippet_outlined,
+                  size: AppDimens.SIZE_28,
+                  color: colorScheme.primary,
+                ),
+              ),
+              title: 'Nhận dạng văn bản (OCR)',
+              description:
+                  'Trích xuất văn bản từ PDF và ảnh, theo dõi tiến độ realtime.',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OcrUploadScreen(),
                   ),
                 );
               },

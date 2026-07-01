@@ -22,3 +22,5 @@ export 'payment_model.dart';
 export 'user_subscription_model.dart';
 export 'increment_usage_model.dart';
 export 'payment_history_model.dart';
+export 'ocr_job_model.dart';
+export 'ocr_result_model.dart';

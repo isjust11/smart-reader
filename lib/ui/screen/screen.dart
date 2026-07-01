@@ -26,3 +26,5 @@ export 'tools/word_to_pdf_converter_screen.dart';
 export 'admin/pdf_scanner_screen.dart';
 export 'settings/page/data_storage_screen.dart';
 export 'settings/page/subscription_plan_screen.dart';
+export 'ocr/ocr_upload_screen.dart';
+export 'ocr/ocr_job_list_screen.dart';

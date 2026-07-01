@@ -164,4 +164,12 @@ class ApiConstant {
   // AI endpoints (Gemini)
   static final aiLookup = "ai/lookup";
   static final aiTranslate = "ai/translate";
+
+  // OCR endpoints
+  static final ocrJobs = "ocr/jobs";
+  static String ocrJobDetail(String id) => "ocr/jobs/$id";
+  static String ocrJobRequeue(String id) => "ocr/jobs/$id/requeue";
+  static String ocrJobResult(String id) => "ocr/jobs/$id/result";
+  static String ocrJobAssets(String id) => "ocr/jobs/$id/assets";
+  static String ocrJobExport(String id) => "ocr/jobs/$id/export";
 }

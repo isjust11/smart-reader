@@ -27,3 +27,5 @@ export 'payment_icon_widget.dart';
 export 'safe_network_svg.dart';
 export 'search_recent_panel.dart';
 export 'base_shadermask.dart';
+export 'app_widgets/ocr_status_badge.dart';
+export 'app_widgets/ocr_job_card.dart';

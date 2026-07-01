@@ -10,3 +10,4 @@ export 'category_repository.dart';
 export 'subscription_repository.dart';
 export 'payment_repository.dart';
 export 'user_subscription_repository.dart';
+export 'ocr_repository.dart';

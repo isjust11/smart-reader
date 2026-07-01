@@ -13,3 +13,4 @@ export 'package:readbox/domain/data/datasources/remote/converter_remote_data_sou
 export 'package:readbox/domain/data/datasources/remote/subscription_remote_data_source.dart';
 export 'package:readbox/domain/data/datasources/remote/payment_remote_data_source.dart';
 export 'package:readbox/domain/data/datasources/remote/user_subscription_remote_data_source.dart';
+export 'package:readbox/domain/data/datasources/remote/ocr_remote_data_source.dart';

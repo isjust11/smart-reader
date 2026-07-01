@@ -2,6 +2,7 @@ import 'package:readbox/blocs/cubit.dart';
 import 'package:readbox/domain/data/datasources/datasource.dart';
 import 'package:readbox/domain/network/network.dart';
 import 'package:readbox/domain/repositories/repositories.dart';
+import 'package:readbox/services/ocr_socket_service.dart';
 import 'package:get_it/get_it.dart';
 
 final getIt = GetIt.instance;
@@ -93,6 +94,15 @@ void registerCubit(GetIt getIt) {
   getIt.registerFactory(
     () => DiscoverCubit(repository: getIt.get<BookRepository>()),
   );
+  getIt.registerFactory(
+    () => OcrUploadCubit(getIt.get<OcrRepository>()),
+  );
+  getIt.registerFactory(
+    () => OcrJobCubit(
+      getIt.get<OcrRepository>(),
+      getIt.get<OcrSocketService>(),
+    ),
+  );
 }
 
 void registerRepositories(GetIt getIt) {
@@ -135,6 +145,9 @@ void registerRepositories(GetIt getIt) {
   getIt.registerLazySingleton(
     () => UserSubscriptionRepository(remoteDataSource: getIt.get<UserSubscriptionRemoteDataSource>()),
   );
+  getIt.registerLazySingleton(
+    () => OcrRepository(remoteDataSource: getIt.get<OcrRemoteDataSource>()),
+  );
 }
 
 
@@ -154,8 +167,10 @@ void registerDataSource(GetIt getIt) {
   getIt.registerLazySingleton(() => SubscriptionRemoteDataSource(network: getIt.get()));
   getIt.registerLazySingleton(() => PaymentRemoteDataSource(network: getIt.get()));
   getIt.registerLazySingleton(() => UserSubscriptionRemoteDataSource(network: getIt.get()));
+  getIt.registerLazySingleton(() => OcrRemoteDataSource(network: getIt.get()));
 }
 
 void registerNetwork(GetIt getIt) {
   getIt.registerLazySingleton(() => Network.instance());
+  getIt.registerLazySingleton(() => OcrSocketService());
 }
