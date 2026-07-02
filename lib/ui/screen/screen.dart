@@ -28,3 +28,4 @@ export 'settings/page/data_storage_screen.dart';
 export 'settings/page/subscription_plan_screen.dart';
 export 'ocr/ocr_upload_screen.dart';
 export 'ocr/ocr_job_list_screen.dart';
+export 'ocr/ocr_editor_screen.dart';

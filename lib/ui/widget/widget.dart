@@ -29,3 +29,7 @@ export 'search_recent_panel.dart';
 export 'base_shadermask.dart';
 export 'app_widgets/ocr_status_badge.dart';
 export 'app_widgets/ocr_job_card.dart';
+export 'app_widgets/ocr_bbox_overlay.dart';
+export 'app_widgets/ocr_page_preview.dart';
+export 'app_widgets/ocr_page_thumbnail_rail.dart';
+export 'app_widgets/ocr_editor_panel.dart';

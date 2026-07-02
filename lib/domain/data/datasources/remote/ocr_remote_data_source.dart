@@ -146,6 +146,24 @@ class OcrRemoteDataSource {
         .toList();
   }
 
+  /// Export kết quả OCR (`txt` đồng bộ, `pdf` bất đồng bộ).
+  Future<Map<String, dynamic>> exportJob(String id, String format) async {
+    final response = await network.post(
+      url: '${ApiConstant.apiHost}${ApiConstant.ocrJobExport(id)}',
+      body: {'format': format},
+    );
+    if (response.isSuccess) {
+      final body = response.data;
+      if (body is Map) {
+        final data = body['data'];
+        if (data is Map) return Map<String, dynamic>.from(data);
+        return Map<String, dynamic>.from(body);
+      }
+      return <String, dynamic>{};
+    }
+    return Future.error(response.errMessage);
+  }
+
   MediaType _resolveContentType(String fileName) {
     final ext = fileName.toLowerCase().split('.').last;
     switch (ext) {

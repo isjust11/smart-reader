@@ -39,4 +39,8 @@ class OcrRepository {
   Future<List<OcrPageModel>> getResult(String id, {int? page}) {
     return remoteDataSource.getResult(id, page: page);
   }
+
+  Future<Map<String, dynamic>> exportJob(String id, String format) {
+    return remoteDataSource.exportJob(id, format);
+  }
 }

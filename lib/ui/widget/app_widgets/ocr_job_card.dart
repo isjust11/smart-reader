@@ -74,6 +74,13 @@ class OcrJobCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     OcrStatusBadge(status: job.status),
+                    if (onTap != null) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ],
                 ),
                 if (isProcessing) ...[

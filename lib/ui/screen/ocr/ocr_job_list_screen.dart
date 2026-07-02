@@ -7,6 +7,7 @@ import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/injection_container.dart';
 import 'package:readbox/res/app_size.dart';
 import 'package:readbox/ui/screen/ocr/ocr_upload_screen.dart';
+import 'package:readbox/ui/screen/ocr/ocr_editor_screen.dart';
 import 'package:readbox/ui/widget/widget.dart';
 
 /// Bộ lọc trạng thái hiển thị trên đầu danh sách.
@@ -139,6 +140,19 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
                     final job = jobs[index];
                     return OcrJobCard(
                       job: job,
+                      onTap: job.status == OcrJobStatus.done
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => OcrEditorScreen(
+                                    jobId: job.id,
+                                    title: job.displayName,
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
                       onRetry: job.status == OcrJobStatus.failed
                           ? () =>
                               context.read<OcrJobCubit>().requeue(job.id)

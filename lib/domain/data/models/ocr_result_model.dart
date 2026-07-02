@@ -19,6 +19,18 @@ class OcrLineModel {
       bbox: _parseBbox(json['bbox']),
     );
   }
+
+  OcrLineModel copyWith({
+    String? text,
+    double? confidence,
+    List<Offset>? bbox,
+  }) {
+    return OcrLineModel(
+      text: text ?? this.text,
+      confidence: confidence ?? this.confidence,
+      bbox: bbox ?? this.bbox,
+    );
+  }
 }
 
 /// Ảnh / figure / table đã tách khỏi trang tài liệu.
@@ -33,6 +45,9 @@ class OcrAssetModel {
   /// 'embedded' | 'layout'.
   final String? source;
 
+  /// Ảnh thay thế cục bộ (chưa upload server) — chỉ dùng trong editor.
+  final String? localImagePath;
+
   const OcrAssetModel({
     required this.type,
     this.bbox = const [],
@@ -40,6 +55,7 @@ class OcrAssetModel {
     this.imageKey,
     this.tableHtml,
     this.source,
+    this.localImagePath,
   });
 
   factory OcrAssetModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +66,26 @@ class OcrAssetModel {
       imageKey: json['imageKey'] as String?,
       tableHtml: json['tableHtml'] as String?,
       source: json['source'] as String?,
+    );
+  }
+
+  OcrAssetModel copyWith({
+    String? type,
+    List<Offset>? bbox,
+    String? imageUrl,
+    String? imageKey,
+    String? tableHtml,
+    String? source,
+    String? localImagePath,
+  }) {
+    return OcrAssetModel(
+      type: type ?? this.type,
+      bbox: bbox ?? this.bbox,
+      imageUrl: imageUrl ?? this.imageUrl,
+      imageKey: imageKey ?? this.imageKey,
+      tableHtml: tableHtml ?? this.tableHtml,
+      source: source ?? this.source,
+      localImagePath: localImagePath ?? this.localImagePath,
     );
   }
 }
@@ -64,6 +100,11 @@ class OcrPageModel {
   final List<OcrAssetModel> images;
   final List<OcrAssetModel> tables;
 
+  /// Ảnh raster đầy đủ của trang, đúng pixel space (width x height) mà
+  /// worker đã dùng để tính bbox. Ưu tiên hiển thị ảnh này thay vì tự render
+  /// lại PDF trên client để bbox luôn khớp chính xác vị trí.
+  final String? pageImageUrl;
+
   const OcrPageModel({
     required this.page,
     this.width = 0,
@@ -72,6 +113,7 @@ class OcrPageModel {
     this.lines = const [],
     this.images = const [],
     this.tables = const [],
+    this.pageImageUrl,
   });
 
   factory OcrPageModel.fromJson(Map<String, dynamic> json) {
@@ -84,8 +126,36 @@ class OcrPageModel {
       lines: _parseList(blocks, OcrLineModel.fromJson),
       images: _parseList(json['images'], OcrAssetModel.fromJson),
       tables: _parseList(json['tables'], OcrAssetModel.fromJson),
+      pageImageUrl: json['pageImageUrl'] as String?,
     );
   }
+
+  OcrPageModel copyWith({
+    int? page,
+    int? width,
+    int? height,
+    String? text,
+    List<OcrLineModel>? lines,
+    List<OcrAssetModel>? images,
+    List<OcrAssetModel>? tables,
+    String? pageImageUrl,
+  }) {
+    return OcrPageModel(
+      page: page ?? this.page,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      text: text ?? this.text,
+      lines: lines ?? this.lines,
+      images: images ?? this.images,
+      tables: tables ?? this.tables,
+      pageImageUrl: pageImageUrl ?? this.pageImageUrl,
+    );
+  }
+
+  String get mergedText =>
+      text?.trim().isNotEmpty == true
+          ? text!
+          : lines.map((e) => e.text).join('\n');
 }
 
 List<T> _parseList<T>(
@@ -105,6 +175,13 @@ List<Offset> _parseBbox(dynamic raw) {
   for (final point in raw) {
     if (point is List && point.length >= 2) {
       points.add(Offset(_toDouble(point[0]), _toDouble(point[1])));
+    } else if (point is Map) {
+      points.add(
+        Offset(
+          _toDouble(point['x'] ?? point['0']),
+          _toDouble(point['y'] ?? point['1']),
+        ),
+      );
     }
   }
   return points;
