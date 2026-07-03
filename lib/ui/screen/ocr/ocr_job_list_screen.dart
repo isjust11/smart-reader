@@ -6,6 +6,8 @@ import 'package:readbox/blocs/ocr/ocr.dart';
 import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/injection_container.dart';
 import 'package:readbox/res/app_size.dart';
+import 'package:readbox/res/dimens.dart';
+import 'package:readbox/ui/screen/app_shell.dart';
 import 'package:readbox/ui/screen/ocr/ocr_upload_screen.dart';
 import 'package:readbox/ui/screen/ocr/ocr_editor_screen.dart';
 import 'package:readbox/ui/widget/widget.dart';
@@ -44,6 +46,7 @@ class _OcrJobListBody extends StatefulWidget {
 
 class _OcrJobListBodyState extends State<_OcrJobListBody> {
   final RefreshController _refreshController = RefreshController();
+  final TextEditingController _searchController = TextEditingController();
 
   static const _filters = [
     _StatusFilter('Tất cả', null),
@@ -71,6 +74,7 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
   @override
   void dispose() {
     _refreshController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -92,26 +96,44 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
     context.read<OcrJobCubit>().loadJobs(status: status);
   }
 
+  void _onSearchChanged(String query) {
+    context.read<OcrJobCubit>().filterByQuery(query);
+  }
+
+  Future<bool?> _confirmDelete(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xoá job OCR?'),
+        content: const Text('Job này sẽ bị xoá vĩnh viễn.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Huỷ'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xoá'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return BaseScreen<OcrJobCubit>(
       colorBg: colorScheme.surface,
-      title: 'Công việc OCR',
+      title: 'Tài liệu OCR',
       showGlobalFloatingActions: false,
-      floatingButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const OcrUploadScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Tạo mới'),
-      ),
       body: Column(
         children: [
+          _buildSearchBar(colorScheme),
           _buildFilterBar(colorScheme),
           Expanded(
             child: BlocBuilder<OcrJobCubit, BaseState>(
@@ -126,7 +148,7 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
                     ? state.data
                     : const <OcrJobModel>[];
                 if (jobs.isEmpty) {
-                  return _buildEmpty(colorScheme);
+                  return _buildEmpty(context, colorScheme);
                 }
                 return CustomSmartRefresher(
                   refreshController: _refreshController,
@@ -138,25 +160,46 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
                   listData: jobs,
                   itemBuilder: (context, index) {
                     final job = jobs[index];
-                    return OcrJobCard(
-                      job: job,
-                      onTap: job.status == OcrJobStatus.done
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => OcrEditorScreen(
-                                    jobId: job.id,
-                                    title: job.displayName,
+                    return Dismissible(
+                      key: ValueKey(job.id),
+                      direction: DismissDirection.endToStart,
+                      confirmDismiss: (_) => _confirmDelete(context),
+                      onDismissed: (_) =>
+                          context.read<OcrJobCubit>().deleteJob(job.id),
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: AppDimens.SIZE_20),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: colorScheme.onErrorContainer,
+                          size: AppDimens.SIZE_28,
+                        ),
+                      ),
+                      child: OcrJobCard(
+                        job: job,
+                        onTap: job.status == OcrJobStatus.done
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OcrEditorScreen(
+                                      jobId: job.id,
+                                      title: job.displayName,
+                                    ),
                                   ),
-                                ),
-                              );
-                            }
-                          : null,
-                      onRetry: job.status == OcrJobStatus.failed
-                          ? () =>
-                              context.read<OcrJobCubit>().requeue(job.id)
-                          : null,
+                                );
+                              }
+                            : null,
+                        onRetry: job.status == OcrJobStatus.failed
+                            ? () =>
+                                context.read<OcrJobCubit>().requeue(job.id)
+                            : null,
+                      ),
                     );
                   },
                 );
@@ -167,7 +210,45 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
       ),
     );
   }
+  Widget _buildSearchBar(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.SIZE_16,
+        AppDimens.SIZE_12,
+        AppDimens.SIZE_16,
+        AppDimens.SIZE_4,
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        decoration: InputDecoration(
+          hintText: 'Tìm theo tên file...',
+          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                  },
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.SIZE_12,
+            vertical: AppDimens.SIZE_10,
+          ),
+          isDense: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.SIZE_24),
+            borderSide: BorderSide(color: colorScheme.outline),
+          ),
+          filled: true,
+          fillColor: colorScheme.surfaceContainerLow,
+        ),
+      ),
+    );
 
+  }
   Widget _buildFilterBar(ColorScheme colorScheme) {
     return SizedBox(
       height: 52,
@@ -189,19 +270,22 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
     );
   }
 
-  Widget _buildEmpty(ColorScheme colorScheme) {
+  Widget _buildEmpty(BuildContext context, ColorScheme colorScheme) {
+    final isSearching = _searchController.text.isNotEmpty;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.inbox_outlined,
+            isSearching ? Icons.search_off_rounded : Icons.folder_open_rounded,
             size: 72,
             color: colorScheme.outline,
           ),
           const SizedBox(height: 12),
           Text(
-            'Chưa có công việc OCR nào',
+            isSearching
+                ? 'Không tìm thấy kết quả'
+                : 'Chưa có tài liệu OCR nào',
             style: TextStyle(
               fontSize: AppSize.fontSizeXLarge,
               fontWeight: FontWeight.w600,
@@ -210,12 +294,33 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Nhấn "Tạo mới" để tải tài liệu và bắt đầu.',
+            isSearching
+                ? 'Thử tìm với từ khoá khác'
+                : 'Quét hoặc tải tài liệu lên để bắt đầu nhận dạng',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: AppSize.fontSizeMedium,
               color: colorScheme.onSurfaceVariant,
             ),
           ),
+          if (!isSearching) ...[
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () async {
+                final job = await Navigator.push<OcrJobModel?>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const OcrUploadScreen(),
+                  ),
+                );
+                if (job != null && context.mounted) {
+                  context.read<OcrJobCubit>().addJob(job);
+                }
+              },
+              icon: const Icon(Icons.document_scanner_rounded),
+              label: const Text('Quét tài liệu'),
+            ),
+          ],
         ],
       ),
     );

@@ -27,6 +27,7 @@ class OcrJobCubit extends Cubit<BaseState> {
   int _totalPages = 1;
   bool _isLoadingMore = false;
   String? _status;
+  String _searchQuery = '';
 
   List<OcrJobModel> get jobs => List.unmodifiable(_jobs);
   String? get status => _status;
@@ -98,6 +99,24 @@ class OcrJobCubit extends Cubit<BaseState> {
     _emitList();
   }
 
+  /// Xoá một job khỏi server và danh sách local.
+  Future<void> deleteJob(String id) async {
+    try {
+      await _repository.deleteJob(id);
+      _jobs.removeWhere((e) => e.id == id);
+      _emitList();
+    } catch (e) {
+      emit(ErrorState(BlocUtils.getMessageError(e), isLocalizeMessage: false));
+      _emitList();
+    }
+  }
+
+  /// Lọc danh sách theo tên file (local filter, không gọi API).
+  void filterByQuery(String query) {
+    _searchQuery = query.trim();
+    _emitList();
+  }
+
   void _onSocketUpdate(OcrJobUpdate update) {
     final index = _jobs.indexWhere((e) => e.rawId == update.jobId);
     if (index < 0) return;
@@ -128,9 +147,16 @@ class OcrJobCubit extends Cubit<BaseState> {
   }
 
   void _emitList() {
+    List<OcrJobModel> list = List<OcrJobModel>.from(_jobs);
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list
+          .where((j) => (j.originalName ?? '').toLowerCase().contains(q))
+          .toList();
+    }
     emit(
       LoadedState<List<OcrJobModel>>(
-        List<OcrJobModel>.from(_jobs),
+        list,
         message: '',
         isLocalizeMessage: false,
       ),

@@ -58,6 +58,7 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
   bool _addMode = false;
   Offset? _drawStart;
   Rect? _drawRect;
+  Rect? _pendingInsertRect;
 
   /// Ảnh raster đầy đủ do worker upload (đúng pixel space bbox) — ưu tiên
   /// hiển thị ảnh này thay vì tự render lại PDF trên client.
@@ -135,6 +136,7 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
       _addMode = !_addMode;
       _drawStart = null;
       _drawRect = null;
+      _pendingInsertRect = null;
     });
   }
 
@@ -159,8 +161,22 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
     });
     // Bỏ qua thao tác chạm nhầm (kéo quá nhỏ).
     if (rect != null && rect.width > 12 && rect.height > 8) {
-      widget.onAddLine?.call(rect);
+      setState(() => _pendingInsertRect = rect);
     }
+  }
+
+  void _confirmInsertRect() {
+    final rect = _pendingInsertRect;
+    if (rect == null) return;
+    widget.onAddLine?.call(rect);
+    setState(() {
+      _pendingInsertRect = null;
+      _addMode = false;
+    });
+  }
+
+  void _clearPendingRect() {
+    setState(() => _pendingInsertRect = null);
   }
 
   void _zoomBy(double factor) {
@@ -170,9 +186,9 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
     if (actualFactor == 1) return;
     final center = Offset(_viewportSize.width / 2, _viewportSize.height / 2);
     final updated = _transformCtrl.value.clone()
-      ..translateByDouble(center.dx, center.dy, 0, 1)
-      ..scaleByDouble(actualFactor, actualFactor, actualFactor, 1)
-      ..translateByDouble(-center.dx, -center.dy, 0, 1);
+      ..translate(center.dx, center.dy)
+      ..scale(actualFactor, actualFactor)
+      ..translate(-center.dx, -center.dy);
     _transformCtrl.value = updated;
   }
 
@@ -222,6 +238,13 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
                       right: 8,
                       child: _buildAddModeHint(colorScheme),
                     ),
+                  if (_addMode && _pendingInsertRect != null)
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 62,
+                      child: _buildInsertActions(colorScheme),
+                    ),
                   Positioned(
                     left: 8,
                     bottom: 8,
@@ -250,7 +273,9 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Kéo trên vùng OCR bỏ sót để vẽ khung mới, sau đó nhập text ở bảng bên cạnh.',
+        _pendingInsertRect == null
+            ? 'Kéo trên vùng OCR bỏ sót để vẽ khung. Sau đó bấm Insert để chèn đúng box.'
+            : 'Đã chọn vùng thiếu OCR. Bấm Insert để chèn dòng mới vào đúng khung.',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 12,
@@ -293,6 +318,36 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInsertActions(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _clearPendingRect,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Vẽ lại'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: _confirmInsertRect,
+              icon: const Icon(Icons.add_task, size: 16),
+              label: const Text('Insert'),
+            ),
+          ),
+        ],
       ),
     );
   }

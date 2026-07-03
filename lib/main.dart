@@ -35,7 +35,7 @@ String _languageFromSystemLocale() {
   return supported.first.languageCode;
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Load .env theo build mode: dev (debug) hoặc prod (release)
   // Fallback sang .env nếu file cụ thể không tồn tại
@@ -52,7 +52,11 @@ void main() async {
   await initLanguageDetector();
   await di.init();
   // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+  }
   await DeepLinkService().initialize();
 
   // Initialize Google Mobile Ads

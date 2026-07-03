@@ -146,6 +146,29 @@ class OcrRemoteDataSource {
         .toList();
   }
 
+  /// Lưu toàn bộ trang OCR đã chỉnh sửa từ editor.
+  Future<void> saveResult(String id, List<OcrPageModel> pages) async {
+    final response = await network.put(
+      url: '${ApiConstant.apiHost}${ApiConstant.ocrJobSaveResult(id)}',
+      body: {
+        'pages': pages.map((e) => e.toJson()).toList(),
+      },
+    );
+    if (!response.isSuccess) {
+      return Future.error(response.errMessage);
+    }
+  }
+
+  /// Xoá một job OCR theo id.
+  Future<void> deleteJob(String id) async {
+    final response = await network.delete(
+      url: '${ApiConstant.apiHost}${ApiConstant.ocrJobDetail(id)}',
+    );
+    if (!response.isSuccess) {
+      return Future.error(response.errMessage);
+    }
+  }
+
   /// Export kết quả OCR (`txt` đồng bộ, `pdf` bất đồng bộ).
   Future<Map<String, dynamic>> exportJob(String id, String format) async {
     final response = await network.post(

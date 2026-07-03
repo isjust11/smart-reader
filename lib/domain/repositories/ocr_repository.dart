@@ -40,7 +40,13 @@ class OcrRepository {
     return remoteDataSource.getResult(id, page: page);
   }
 
+  Future<void> saveResult(String id, List<OcrPageModel> pages) {
+    return remoteDataSource.saveResult(id, pages);
+  }
+
   Future<Map<String, dynamic>> exportJob(String id, String format) {
     return remoteDataSource.exportJob(id, format);
   }
+
+  Future<void> deleteJob(String id) => remoteDataSource.deleteJob(id);
 }

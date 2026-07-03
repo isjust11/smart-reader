@@ -11,11 +11,13 @@ import 'package:readbox/blocs/library/library_cubit.dart';
 import 'package:readbox/domain/repositories/repositories.dart';
 import 'package:readbox/domain/data/datasources/remote/admin_remote_data_source.dart';
 import 'package:readbox/injection_container.dart' as di;
+import 'package:readbox/ui/screen/app_shell.dart';
 
 class Routes {
   Routes._();
 
   //screen name
+  static const String appShell = "/appShell";
   static const String splashScreen = "/splashScreen";
   static const String loginScreen = "/loginScreen";
   static const String registerScreen = "/registerScreen";
@@ -53,6 +55,11 @@ class Routes {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case appShell:
+        return PageTransition(
+          child: const AppShell(),
+          type: PageTransitionType.fade,
+        );
       case mainScreen:
         return PageTransition(
           child: const DiscoverScreen(),

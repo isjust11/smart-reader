@@ -614,7 +614,7 @@ class _SplashState extends State<SplashScreen> with TickerProviderStateMixin {
       if (_hasAgreedPolicy) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          Routes.mainScreen,
+          Routes.appShell,
           (route) => false,
         );
         return;
@@ -622,7 +622,7 @@ class _SplashState extends State<SplashScreen> with TickerProviderStateMixin {
     }
     SharedPreferenceUtil.saveFirstLogin(false);
     setState(() {
-      _nextRoute = isTokenValid ? Routes.mainScreen : Routes.loginScreen;
+      _nextRoute = isTokenValid ? Routes.appShell : Routes.loginScreen;
       _isReady = true;
     });
   }

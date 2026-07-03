@@ -1,6 +1,7 @@
 export 'auth/auth_cubit.dart';
 export 'base_list_cubit.dart';
 export 'app_cubit.dart';
+export 'home/home_cubit.dart';
 export 'user_info_cubit.dart';
 export 'library/library_cubit.dart';
 export 'discover/discover_cubit.dart';

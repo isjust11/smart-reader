@@ -23,6 +23,7 @@ class OcrEditorLoaded extends Equatable {
   final OcrEditorSelection? selection;
   final bool isDirty;
   final bool isExporting;
+  final bool isSaving;
 
   const OcrEditorLoaded({
     required this.job,
@@ -31,6 +32,7 @@ class OcrEditorLoaded extends Equatable {
     this.selection,
     this.isDirty = false,
     this.isExporting = false,
+    this.isSaving = false,
   });
 
   OcrPageModel get currentPage => pages[currentPageIndex];
@@ -43,6 +45,7 @@ class OcrEditorLoaded extends Equatable {
     bool clearSelection = false,
     bool? isDirty,
     bool? isExporting,
+    bool? isSaving,
   }) {
     return OcrEditorLoaded(
       job: job ?? this.job,
@@ -51,6 +54,7 @@ class OcrEditorLoaded extends Equatable {
       selection: clearSelection ? null : (selection ?? this.selection),
       isDirty: isDirty ?? this.isDirty,
       isExporting: isExporting ?? this.isExporting,
+      isSaving: isSaving ?? this.isSaving,
     );
   }
 
@@ -62,5 +66,6 @@ class OcrEditorLoaded extends Equatable {
         selection,
         isDirty,
         isExporting,
+        isSaving,
       ];
 }

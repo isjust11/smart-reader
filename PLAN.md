@@ -1,383 +1,414 @@
-# Kế Hoạch Phát Triển Ứng Dụng Đọc và Quản Lý Ebook - ReadBox
+﻿# Kế Hoạch Phát Triển Ứng Dụng Smart Reader
+
+> **Phiên bản kế hoạch:** 2.0 — Rebuild từ nền ReadBox sang Smart Reader  
+> **Ngày cập nhật:** 2026-07-03
+
+---
 
 ## 📋 Tổng Quan Dự Án
 
-Ứng dụng ReadBox là một ứng dụng Flutter để đọc và quản lý ebook với các tính năng:
-- Quản lý thư viện sách (thêm, xóa, sắp xếp, tìm kiếm)
-- Đọc sách với trải nghiệm tốt (điều hướng, bookmark, ghi chú)
-- Quản lý metadata (tác giả, thể loại, đánh giá)
-- Đồng bộ và lưu trữ local/cloud
-- UI/UX hiện đại và thân thiện
+**Smart Reader** là ứng dụng camera-to-document thông minh, cho phép người dùng:
+- Chụp hình tài liệu thực tế → OCR bằng PaddleOCR (Python server) → biên tập → xuất PDF chuyên nghiệp
+- Chuyển đổi định dạng tài liệu: PDF ↔ Word ↔ Image
+- Biên tập văn bản sau OCR với bộ công cụ giống Word (font, màu, căn lề…)
+- Theo dõi tiến trình các job OCR realtime
+- Xem bài viết hướng dẫn và công cụ tiện ích trên trang chủ
+
+**Nguồn gốc:** Clone từ ReadBox → giữ lại Auth, Notification, Account; rebuild hoàn toàn điều hướng và các màn hình nghiệp vụ chính.
 
 ---
 
-## 🏗️ Kiến Trúc Hiện Tại
+## 🏗️ Kiến Trúc Hiện Tại (Kế Thừa)
 
-Dự án đã có:
-- ✅ Clean Architecture (Domain, Data layers)
-- ✅ BLoC pattern cho state management
-- ✅ Dependency Injection (GetIt)
-- ✅ Authentication (Login, Register)
-- ✅ i18n support (Tiếng Việt, Tiếng Anh)
-- ✅ Routing system
-- ✅ Base widgets và utilities
+| Layer | Trạng thái | Ghi chú |
+|---|---|---|
+| Clean Architecture (Domain / Data) | ✅ Giữ nguyên | |
+| BLoC / Cubit state management | ✅ Giữ nguyên | |
+| Dependency Injection (GetIt) | ✅ Giữ nguyên | |
+| Authentication (Login, Register, ForgotPassword) | ✅ Kế thừa | |
+| i18n (VI / EN) | ✅ Kế thừa | |
+| Routing system | ✅ Mở rộng | Thêm route mới |
+| OCR BLoC (OcrJobCubit, OcrEditorCubit, OcrUploadCubit) | ✅ Kế thừa | Đã có |
+| Tools (Word→PDF, Document Scanner) | ✅ Kế thừa | |
+| Notification screens | ✅ Kế thừa | |
+| Settings / Account screens | ✅ Kế thừa | |
 
 ---
 
-## 📦 Các Bước Phát Triển
+## 🗺️ Điều Hướng Mới — Bottom Navigation (5 Tab)
 
-### **GIAI ĐOẠN 1: Thiết Lập Cơ Sở Hạ Tầng (Foundation)**
-
-#### 1.1. Cài Đặt Dependencies Cần Thiết
-- [ ] **epub_kitty** hoặc **flutter_epub** - Đọc file EPUB
-- [ ] **pdfx** hoặc **syncfusion_flutter_pdfviewer** - Đọc file PDF
-- [ ] **sqflite** hoặc **hive** - Database local để lưu metadata
-- [ ] **path_provider** - Quản lý đường dẫn file
-- [ ] **file_picker** - Chọn file từ thiết bị
-- [ ] **permission_handler** - Quyền truy cập file
-- [ ] **flutter_cache_manager** - Cache ảnh và tài nguyên
-- [ ] **share_plus** - Chia sẻ sách (đã có)
-- [ ] **flutter_tts** (tùy chọn) - Text-to-speech
-
-#### 1.2. Cấu Trúc Thư Mục Domain Layer
 ```
-lib/domain/
-  ├── entities/
-  │   ├── book_entity.dart
-  │   ├── chapter_entity.dart
-  │   ├── bookmark_entity.dart
-  │   ├── reading_progress_entity.dart
-  │   └── category_entity.dart
-  ├── repositories/
-  │   ├── book_repository.dart
-  │   ├── library_repository.dart
-  │   └── reading_repository.dart
-  └── usecases/
-      ├── book/
-      │   ├── add_book_usecase.dart
-      │   ├── delete_book_usecase.dart
-      │   ├── get_book_list_usecase.dart
-      │   └── search_books_usecase.dart
-      ├── reading/
-      │   ├── save_reading_progress_usecase.dart
-      │   ├── get_reading_progress_usecase.dart
-      │   └── save_bookmark_usecase.dart
-      └── library/
-          ├── organize_books_usecase.dart
-          └── filter_books_usecase.dart
+┌──────────────────────────────────────────────────────┐
+│                   Smart Reader App                    │
+├──────────┬──────────┬──────────┬──────────┬──────────┤
+│  🏠 Home │ 📋 OCR  │ 📷 Quét │ 🔔 Notif │ 👤 Tài  │
+│  Trang   │ Danh    │ Tài liệu │  Thông   │  Khoản  │
+│  chủ    │  sách   │          │   báo    │         │
+└──────────┴──────────┴──────────┴──────────┴──────────┘
 ```
 
-#### 1.3. Cấu Trúc Thư Mục Data Layer
+| Tab | Route | Screen | Trạng thái |
+|---|---|---|---|
+| Home | `/home` | `HomeScreen` | 🔨 Xây mới |
+| OCR List | `/ocrList` | `OcrJobListScreen` | ✅ Đã có → tích hợp vào tab |
+| Quét tài liệu | `/scanner` | `OcrUploadScreen` | ✅ Đã có → làm tab chính |
+| Thông báo | `/notifications` | `NotificationScreen` | ✅ Kế thừa |
+| Tài khoản | `/profile` | `ProfileScreen` | ✅ Kế thừa |
+
+---
+
+## 📦 Các Giai Đoạn Phát Triển
+
+---
+
+### **GIAI ĐOẠN 0: Rebuild Bottom Navigation Shell**
+> Mục tiêu: Thay toàn bộ shell điều hướng cũ bằng BottomNavigationBar 5 tab.
+
+#### 0.1. Tạo `AppShell` Widget
+- [ ] Tạo `lib/ui/screen/app_shell.dart` — StatefulWidget giữ `PageController` / `IndexedStack` cho 5 tab
+- [ ] Tích hợp `BottomNavigationBar` với icon + label theo thiết kế mới
+- [ ] Badge số thông báo chưa đọc trên tab Notification (dùng `NotificationCubit`)
+- [ ] Badge floating action (hoặc icon nổi bật) cho tab Quét tài liệu ở giữa
+
+#### 0.2. Cập Nhật Routes
+- [ ] Thêm `appShell` route làm màn hình chính sau login
+- [ ] Giữ các route con (bookDetail, ocrEditor, settings…) không thay đổi
+- [ ] Redirect `splashScreen` → `appShell` (nếu đã đăng nhập) thay vì `mainScreen` cũ
+
+#### 0.3. Cấu Trúc File
 ```
-lib/domain/data/
-  ├── datasources/
-  │   ├── local/
-  │   │   ├── book_local_data_source.dart
-  │   │   ├── library_local_data_source.dart
-  │   │   └── reading_local_data_source.dart
-  │   └── remote/ (nếu có backend)
-  │       └── book_remote_data_source.dart
-  ├── models/
-  │   ├── book_model.dart
-  │   ├── chapter_model.dart
-  │   ├── bookmark_model.dart
-  │   └── reading_progress_model.dart
-  └── repositories/
-      ├── book_repository_impl.dart
-      ├── library_repository_impl.dart
-      └── reading_repository_impl.dart
+lib/ui/screen/
+  ├── app_shell.dart            ← THÊM MỚI
+  ├── home/
+  │   └── home_screen.dart      ← THÊM MỚI
+  ├── ocr/
+  │   ├── ocr_job_list_screen.dart   ✅ đã có
+  │   ├── ocr_upload_screen.dart     ✅ đã có
+  │   └── ocr_editor_screen.dart     ✅ đã có
+  ├── notification/             ✅ kế thừa
+  ├── settings/                 ✅ kế thừa
+  └── auth/                     ✅ kế thừa
 ```
 
 ---
 
-### **GIAI ĐOẠN 2: Core Features - Quản Lý Thư Viện**
+### **GIAI ĐOẠN 1: Màn Trang Chủ (Home Tab)**
+> Mục tiêu: Xây `HomeScreen` — trung tâm điều hướng công cụ và nội dung bài viết.
 
-#### 2.1. Entity và Model
-- [ ] Tạo `BookEntity` với các thuộc tính:
-  - id, title, author, description, coverImage
-  - filePath, fileType (EPUB, PDF), fileSize
-  - categories, tags, rating
-  - dateAdded, lastRead, totalPages
-  - isFavorite, isArchived
+#### 1.1. Thiết Kế Layout
+```
+HomeScreen
+  ├── AppBar: Logo "Smart Reader" + Search icon
+  ├── Section 1 — Công Cụ Chuyển Đổi (Horizontal ScrollView)
+  │   ├── Card: PDF → Word
+  │   ├── Card: Word → PDF
+  │   ├── Card: Image → PDF
+  │   ├── Card: PDF → Image
+  │   └── Card: Nén PDF
+  ├── Section 2 — Quét Nhanh (Banner CTA)
+  │   └── Button "Quét tài liệu ngay" → chuyển sang tab Scanner
+  ├── Section 3 — Job OCR Gần Đây (Horizontal List, max 5)
+  │   └── "Xem tất cả" → chuyển sang tab OCR List
+  └── Section 4 — Bài Viết / Hướng Dẫn (Vertical List)
+      ├── Bài viết tip sử dụng OCR
+      └── Hướng dẫn biên tập PDF
+```
 
-- [ ] Tạo `ChapterEntity` cho EPUB
-- [ ] Tạo `BookmarkEntity`
-- [ ] Tạo `ReadingProgressEntity`
-- [ ] Tạo các Model tương ứng
+#### 1.2. Công Cụ Chuyển Đổi
+- [ ] `ToolCardWidget` — card tái sử dụng (icon + label + onTap)
+- [ ] Điều hướng tới `WordToPdfConverterScreen` (đã có)
+- [ ] Điều hướng tới `DocumentScannerScreen` (đã có)
+- [ ] Placeholder card cho Image→PDF, PDF→Image, Nén PDF (hiển thị "Coming Soon" badge)
 
-#### 2.2. Local Data Source
-- [ ] Setup database (SQLite hoặc Hive)
-- [ ] Implement CRUD operations cho Book
-- [ ] Implement search và filter
-- [ ] Implement file management (copy, delete files)
+#### 1.3. BLoC / Cubit
+- [ ] `HomeCubit` — load job gần đây + bài viết (tái dùng `OcrJobCubit` + API bài viết nếu có)
+- [ ] State: `HomeLoaded { recentJobs, articles }`
 
-#### 2.3. Repository Implementation
-- [ ] Implement `BookRepository`
-- [ ] Implement `LibraryRepository`
-- [ ] Handle errors và exceptions
-
-#### 2.4. BLoC/Cubit
-- [ ] `LibraryCubit` - Quản lý danh sách sách
-- [ ] `BookDetailCubit` - Chi tiết sách
-- [ ] `SearchCubit` - Tìm kiếm sách
-- [ ] `CategoryCubit` - Quản lý thể loại
-
-#### 2.5. UI Screens
-- [ ] **LibraryScreen** - Màn hình thư viện chính
-  - Grid/List view
-  - Sort options (theo tên, ngày thêm, tác giả)
-  - Filter (thể loại, đã đọc/chưa đọc, yêu thích)
-  - Search bar
-  
-- [ ] **BookDetailScreen** - Chi tiết sách
-  - Hiển thị metadata
-  - Nút đọc sách
-  - Nút thêm vào yêu thích
-  - Xóa sách
-  - Chia sẻ
-
-- [ ] **AddBookScreen** - Thêm sách mới
-  - File picker
-  - Import từ thư mục
-  - Drag & drop (desktop)
+#### 1.4. Bài Viết (Articles)
+- [ ] Model `ArticleModel { id, title, summary, thumbnailUrl, publishedAt }`
+- [ ] API endpoint hoặc static data nếu backend chưa có
+- [ ] `ArticleCardWidget` — thumbnail + title + date
+- [ ] `ArticleDetailScreen` — WebView hoặc render Markdown
 
 ---
 
-### **GIAI ĐOẠN 3: Reader Features - Đọc Sách**
+### **GIAI ĐOẠN 2: Màn Danh Sách OCR (OCR List Tab)**
+> Mục tiêu: Nâng cấp `OcrJobListScreen` thành tab độc lập với UX tốt hơn.
 
-#### 3.1. EPUB Reader
-- [ ] Setup EPUB parser
-- [ ] Render HTML content
-- [ ] Navigation (next/previous chapter, page)
-- [ ] Table of contents
-- [ ] Text selection và highlight
-- [ ] Bookmark functionality
-- [ ] Reading progress tracking
+#### 2.1. Tính Năng Hiện Có (Giữ Nguyên)
+- ✅ Filter theo trạng thái: Tất cả / Đang chờ / Đang xử lý / Hoàn tất / Thất bại
+- ✅ Pull-to-refresh + load-more
+- ✅ Realtime status update
+- ✅ Điều hướng sang `OcrEditorScreen`
 
-#### 3.2. PDF Reader
-- [ ] Setup PDF viewer
-- [ ] Page navigation
-- [ ] Zoom in/out
-- [ ] Bookmark
-- [ ] Reading progress
+#### 2.2. Nâng Cấp
+- [ ] **Empty state đẹp** — illustration + nút "Quét ngay" khi chưa có job
+- [ ] **Job card nâng cấp** — thêm thumbnail preview trang đầu tiên
+- [ ] **Swipe to delete** — xoá job thất bại / đã xong
+- [ ] **Search bar** — tìm kiếm theo tên file / ngày tạo
+- [ ] **Batch actions** — chọn nhiều job để xoá hoặc xuất PDF
 
-#### 3.3. Reader Settings
-- [ ] Font size adjustment
-- [ ] Font family selection
-- [ ] Theme (light/dark/sepia)
-- [ ] Line spacing
-- [ ] Margin adjustment
-- [ ] Brightness control
-
-#### 3.4. Reader UI
-- [ ] **ReaderScreen** - Màn hình đọc chính
-  - Toolbar (ẩn/hiện khi tap)
-  - Progress indicator
-  - Chapter navigation
-  - Settings panel
-  - Bookmark button
-  
-- [ ] **ReaderSettingsBottomSheet** - Cài đặt đọc
-- [ ] **TableOfContentsDrawer** - Mục lục
-- [ ] **BookmarkListScreen** - Danh sách bookmark
-
-#### 3.5. BLoC/Cubit
-- [ ] `ReaderCubit` - Quản lý trạng thái đọc
-- [ ] `ReaderSettingsCubit` - Cài đặt đọc
-- [ ] `BookmarkCubit` - Quản lý bookmark
+#### 2.3. BLoC Updates
+- [ ] Thêm action `deleteJob(jobId)` vào `OcrJobCubit`
+- [ ] Thêm action `searchJobs(query)` vào `OcrJobCubit`
 
 ---
 
-### **GIAI ĐOẠN 4: Advanced Features**
+### **GIAI ĐOẠN 3: Màn Quét Tài Liệu (Scanner Tab)**
+> Mục tiêu: Biến `OcrUploadScreen` thành trung tâm công cụ OCR với UX camera-first.
 
-#### 4.1. Metadata Management
-- [ ] Extract metadata từ file (EPUB metadata, PDF info)
-- [ ] Edit metadata (title, author, description)
-- [ ] Cover image extraction/editing
-- [ ] Categories và tags management
+#### 3.1. Layout Scanner Tab
+```
+ScannerScreen (tab chính)
+  ├── Header: "Quét Tài Liệu"
+  ├── Primary Action — Camera Scan (lớn, nổi bật)
+  │   └── Mở camera → chụp → crop → upload
+  ├── Secondary Actions (Grid 2x2)
+  │   ├── Chọn ảnh từ thư viện
+  │   ├── Chọn PDF sẵn có
+  │   ├── Chụp nhiều trang (multi-page batch)
+  │   └── Quét QR / Barcode (optional)
+  └── Tip ngắn: "Đặt tài liệu phẳng, đủ ánh sáng"
+```
 
-#### 4.2. Statistics & Analytics
-- [ ] Reading statistics screen
-  - Số sách đã đọc
-  - Tổng thời gian đọc
-  - Sách đang đọc
-  - Reading streak
-  - Pages read per day/week/month
+#### 3.2. Luồng Camera Scan
+```
+[Mở Camera] 
+  → [Preview realtime + auto edge detection] 
+  → [Chụp / Chọn vùng crop] 
+  → [Preview ảnh đã crop] 
+  → [Xác nhận / Chụp thêm trang] 
+  → [Upload lên server] 
+  → [Tạo OCR Job] 
+  → [Chuyển sang OcrJobListScreen với job mới]
+```
 
-#### 4.3. Organization
-- [ ] Collections/Shelves - Tạo bộ sưu tập
-- [ ] Tags system
-- [ ] Custom sorting
-- [ ] Archive feature
+#### 3.3. Dependencies Cần Thêm
+- [ ] `edge_detection` hoặc `document_scanner` — tự động phát hiện viền tài liệu
+- [ ] `camera` — camera preview
+- [ ] `image_cropper` — crop thủ công nếu auto-detect sai
 
-#### 4.4. Search & Discovery
-- [ ] Full-text search trong sách
-- [ ] Search trong metadata
-- [ ] Recent searches
-- [ ] Search suggestions
-
----
-
-### **GIAI ĐOẠN 5: Data Persistence & Sync**
-
-#### 5.1. Local Storage
-- [ ] Database schema design
-- [ ] Migration strategy
-- [ ] Backup/Restore local data
-- [ ] Cache management
-
-#### 5.2. Cloud Sync (Optional - nếu có backend)
-- [ ] Authentication với backend
-- [ ] Upload/download books
-- [ ] Sync reading progress
-- [ ] Sync bookmarks
-- [ ] Conflict resolution
+#### 3.4. Multi-page Support
+- [ ] `MultiPageScanCubit` — quản lý danh sách ảnh đã chụp
+- [ ] `PageThumbnailReel` — dải thumbnail nằm ngang, có thể sắp xếp lại
+- [ ] Xác nhận thứ tự trang trước khi upload
 
 ---
 
-### **GIAI ĐOẠN 6: UI/UX Enhancement**
+### **GIAI ĐOẠN 4: Màn Biên Tập OCR (OCR Editor) — Nâng Cấp**
+> Mục tiêu: Nâng cấp `OcrEditorScreen` thành rich-text editor giống Word.
 
-#### 6.1. Design System
-- [ ] Color scheme cho reader
-- [ ] Typography system
-- [ ] Icon set
-- [ ] Animation transitions
+#### 4.1. Tính Năng Hiện Có (Giữ Nguyên)
+- ✅ Rail thumbnail trang (trái)
+- ✅ Preview bbox click được
+- ✅ Panel chỉnh sửa text / hình / bảng cơ bản
 
-#### 6.2. Responsive Design
-- [ ] Tablet layout
-- [ ] Desktop layout (nếu support)
-- [ ] Adaptive UI components
+#### 4.2. Rich Text Editor Toolbar
+```
+Toolbar
+  ├── Font family dropdown (Roboto, Times New Roman, Arial…)
+  ├── Font size (8–72pt)
+  ├── Bold / Italic / Underline / Strikethrough
+  ├── Text color picker
+  ├── Highlight color picker
+  ├── Align: Left / Center / Right / Justify
+  ├── List: Bullet / Numbered
+  ├── Indent: tăng / giảm
+  └── Insert: Hình ảnh / Bảng / Ngắt trang
+```
 
-#### 6.3. Accessibility
-- [ ] Screen reader support
-- [ ] High contrast mode
-- [ ] Font scaling
-- [ ] Keyboard navigation
+#### 4.3. Dependencies
+- [ ] `flutter_quill` — rich text editor engine
+- [ ] `flutter_colorpicker` — color picker
+- [ ] `google_fonts` — font family preview
 
----
+#### 4.4. BLoC Updates (`OcrEditorCubit`)
+- [ ] `updateTextBlock(blockId, quillDelta)` — lưu nội dung rich text
+- [ ] `applyFormatToAll(format)` — áp dụng style cho toàn bộ tài liệu
+- [ ] `reorderPage(from, to)` — kéo thả sắp xếp lại trang
+- [ ] `exportToPdf()` — gửi lên server render PDF với layout cuối cùng
 
-### **GIAI ĐOẠN 7: Performance & Optimization**
-
-#### 7.1. Performance
-- [ ] Lazy loading cho danh sách sách
-- [ ] Image caching
-- [ ] Memory management
-- [ ] File parsing optimization
-
-#### 7.2. Testing
-- [ ] Unit tests cho usecases
-- [ ] Widget tests cho UI components
-- [ ] Integration tests cho flows chính
-
----
-
-### **GIAI ĐOẠN 8: Polish & Release**
-
-#### 8.1. Final Touches
-- [ ] Error handling improvements
-- [ ] Loading states
-- [ ] Empty states
-- [ ] Onboarding flow
-
-#### 8.2. Documentation
-- [ ] Code documentation
-- [ ] User guide (nếu cần)
-- [ ] README update
-
-#### 8.3. Release Preparation
-- [ ] App icons và splash screen
-- [ ] Store listings
-- [ ] Privacy policy
-- [ ] Terms of service
-
----
-
-## 🎯 Ưu Tiên Phát Triển (MVP)
-
-### MVP - Minimum Viable Product
-1. ✅ Authentication (đã có)
-2. ⭐ Thêm sách từ file (EPUB, PDF)
-3. ⭐ Hiển thị thư viện sách
-4. ⭐ Đọc sách cơ bản (EPUB)
-5. ⭐ Lưu tiến độ đọc
-6. ⭐ Bookmark
-7. ⭐ Tìm kiếm sách
-
-### Phase 2 - Enhanced Features
-- PDF reader
-- Reader settings (font, theme)
-- Statistics
-- Collections
-- Full-text search
-
-### Phase 3 - Advanced Features
-- Cloud sync
-- Metadata editing
-- Advanced organization
-- Social features (nếu có)
-
----
-
-## 📝 Notes & Considerations
-
-### Technical Decisions
-- **Database**: SQLite (sqflite) cho structured data, Hive cho simple key-value
-- **File Format Support**: Bắt đầu với EPUB, sau đó thêm PDF
-- **State Management**: Tiếp tục dùng BLoC/Cubit
-- **Architecture**: Giữ Clean Architecture hiện tại
-
-### Challenges
-- EPUB parsing có thể phức tạp (HTML rendering, CSS)
-- PDF rendering performance trên mobile
-- Memory management với nhiều sách lớn
-- File permission trên Android/iOS
-
-### Dependencies Cần Thêm
-```yaml
-dependencies:
-  # EPUB Reader
-  epubx: ^3.0.0  # hoặc flutter_epub: ^x.x.x
-  
-  # PDF Reader
-  pdfx: ^2.0.0  # hoặc syncfusion_flutter_pdfviewer
-  
-  # Database
-  sqflite: ^2.3.0
-  path_provider: ^2.1.0
-  
-  # File Management
-  file_picker: ^6.1.1
-  permission_handler: ^11.0.0
-  
-  # Utilities
-  flutter_cache_manager: ^3.3.1
-  path: ^1.8.3
-  uuid: ^4.0.0
+#### 4.5. Export PDF Flow
+```
+[Nhấn Xuất PDF]
+  → [Chọn layout: A4 / Letter / Gốc]
+  → [Chọn chất lượng: Draft / Standard / High]
+  → [Server render PDF]
+  → [Download / Share / Lưu vào thư viện]
 ```
 
 ---
 
-## 🚀 Bắt Đầu Ngay
+### **GIAI ĐOẠN 5: Màn Thông Báo (Notification Tab)**
+> Kế thừa hoàn toàn từ ReadBox, chỉ tích hợp vào tab mới.
 
-### Bước Đầu Tiên (Ngay Bây Giờ)
-1. Cài đặt dependencies cần thiết
-2. Tạo BookEntity và BookModel
-3. Setup database schema
-4. Tạo LibraryScreen cơ bản
-5. Implement file picker để thêm sách
-
----
-
-## 📊 Timeline Ước Tính
-
-- **Giai đoạn 1-2**: 2-3 tuần (Foundation + Library Management)
-- **Giai đoạn 3**: 2-3 tuần (Reader Features)
-- **Giai đoạn 4-5**: 2-3 tuần (Advanced Features + Sync)
-- **Giai đoạn 6-8**: 1-2 tuần (Polish + Release)
-
-**Tổng cộng**: ~7-11 tuần cho MVP hoàn chỉnh
+- ✅ `NotificationScreen` — danh sách thông báo
+- ✅ `NotificationDetailScreen` — chi tiết thông báo
+- ✅ `NotificationCubit` — đếm unread, load list
+- [ ] Cập nhật: Thêm loại thông báo `ocr_job_completed` hiển thị đúng icon + action
 
 ---
 
-*Kế hoạch này có thể được điều chỉnh dựa trên tiến độ và yêu cầu thực tế.*
+### **GIAI ĐOẠN 6: Màn Tài Khoản (Account Tab)**
+> Kế thừa từ ReadBox, bổ sung phần liên quan đến OCR.
 
+- ✅ `ProfileScreen` — thông tin cá nhân, avatar
+- ✅ `SettingsScreen` — cài đặt app, ngôn ngữ, theme
+- ✅ `SubscriptionPlanScreen` — gói dịch vụ
+- ✅ `PaymentHistoryScreen` — lịch sử thanh toán
+- [ ] **Thêm mục "Lưu trữ OCR"** — dung lượng đã dùng / còn lại
+- [ ] **Thêm mục "Ngôn ngữ OCR mặc định"** — Vietnamese / English / Auto
+
+---
+
+## 🎨 Design System
+
+### Theme & Color
+| Token | Giá trị gợi ý |
+|---|---|
+| Primary | `#1A6BFF` (xanh dương đậm — chuyên nghiệp) |
+| Secondary | `#00C7B1` (teal — công nghệ) |
+| Background | `#F8F9FC` |
+| Surface | `#FFFFFF` |
+| Error | `#FF4444` |
+| Success | `#2ECC71` |
+
+### Bottom Nav Icons
+| Tab | Icon |
+|---|---|
+| Home | `Icons.home_rounded` |
+| OCR List | `Icons.list_alt_rounded` |
+| Quét | `Icons.document_scanner_rounded` (FAB-style) |
+| Thông báo | `Icons.notifications_rounded` |
+| Tài khoản | `Icons.person_rounded` |
+
+### Typography
+- Tiêu đề màn hình: **Inter Bold 20px**
+- Section header: **Inter SemiBold 16px**
+- Body: **Inter Regular 14px**
+- Caption: **Inter Regular 12px**
+
+---
+
+## 🔗 Tích Hợp Backend (codebase-admin + codebase-ocr)
+
+### API Endpoints Cần Có
+
+| Endpoint | Mô tả | Backend |
+|---|---|---|
+| `POST /ocr/jobs` | Tạo job OCR mới từ ảnh | codebase-ocr |
+| `GET /ocr/jobs` | Danh sách job (filter, paginate) | codebase-ocr |
+| `GET /ocr/jobs/:id` | Chi tiết + kết quả OCR | codebase-ocr |
+| `DELETE /ocr/jobs/:id` | Xoá job | codebase-ocr |
+| `PUT /ocr/jobs/:id/content` | Cập nhật nội dung biên tập | codebase-ocr |
+| `POST /ocr/jobs/:id/export-pdf` | Xuất PDF | codebase-ocr |
+| `POST /converter/word-to-pdf` | Chuyển Word → PDF | codebase-admin |
+| `POST /converter/pdf-to-word` | Chuyển PDF → Word | codebase-admin |
+| `GET /articles` | Danh sách bài viết hướng dẫn | codebase-admin |
+| `GET /articles/:id` | Chi tiết bài viết | codebase-admin |
+
+### WebSocket / SSE
+- [ ] Realtime OCR job status: `WS /ocr/jobs/:id/status`
+- [ ] Dùng để cập nhật progress bar trong `OcrJobListScreen`
+
+---
+
+## 📁 Cấu Trúc Thư Mục Mục Tiêu
+
+```
+lib/
+  ├── blocs/
+  │   ├── ocr/                    ✅ đã có
+  │   ├── home/
+  │   │   └── home_cubit.dart     🔨 mới
+  │   └── ...
+  ├── domain/
+  │   ├── data/
+  │   │   ├── models/
+  │   │   │   ├── article_model.dart   🔨 mới
+  │   │   │   └── ...
+  │   │   └── ...
+  │   └── repositories/
+  │       ├── article_repository.dart  🔨 mới
+  │       └── ...
+  └── ui/
+      └── screen/
+          ├── app_shell.dart           🔨 mới (BottomNav shell)
+          ├── home/
+          │   ├── home_screen.dart     🔨 mới
+          │   └── widgets/
+          │       ├── tool_card_widget.dart
+          │       ├── recent_job_card.dart
+          │       └── article_card_widget.dart
+          ├── ocr/                     ✅ nâng cấp
+          │   ├── ocr_job_list_screen.dart
+          │   ├── ocr_upload_screen.dart
+          │   ├── ocr_editor_screen.dart
+          │   └── widgets/
+          │       └── editor_toolbar.dart  🔨 mới
+          ├── scanner/                 🔨 mới
+          │   ├── scanner_screen.dart
+          │   └── multi_page_scan_screen.dart
+          ├── notification/            ✅ kế thừa
+          ├── settings/                ✅ kế thừa
+          └── auth/                    ✅ kế thừa
+```
+
+---
+
+## ✅ Checklist Tổng Thể
+
+### Giai Đoạn 0 — Navigation Shell
+- [ ] Tạo `AppShell` với BottomNavigationBar 5 tab
+- [ ] Cập nhật routing (splash → appShell)
+- [ ] Badge thông báo unread trên tab 4
+
+### Giai Đoạn 1 — Home Screen
+- [ ] Layout HomeScreen (tools + recent jobs + articles)
+- [ ] `ToolCardWidget`
+- [ ] `HomeCubit` + `HomeState`
+- [ ] `ArticleModel` + `ArticleCardWidget`
+- [ ] Banner CTA "Quét ngay"
+
+### Giai Đoạn 2 — OCR List (Nâng Cấp)
+- [ ] Empty state đẹp
+- [ ] Swipe-to-delete
+- [ ] Search bar
+- [ ] Job thumbnail preview
+
+### Giai Đoạn 3 — Scanner Tab
+- [ ] `ScannerScreen` layout
+- [ ] Camera integration + edge detection
+- [ ] Multi-page batch flow
+- [ ] Upload → tạo job → điều hướng
+
+### Giai Đoạn 4 — OCR Editor (Nâng Cấp)
+- [ ] `flutter_quill` rich text toolbar
+- [ ] Font family + size + color picker
+- [ ] Export PDF flow với tuỳ chọn layout
+- [ ] Drag-reorder pages
+
+### Giai Đoạn 5 & 6 — Notification & Account
+- [ ] Tích hợp vào tab shell
+- [ ] Thêm loại noti `ocr_job_completed`
+- [ ] Thêm mục "Lưu trữ OCR" trong Account
+
+---
+
+## 🚀 Thứ Tự Ưu Tiên Triển Khai
+
+```
+[P0] AppShell + Bottom Nav → Nền tảng cho mọi thứ
+  ↓
+[P1] HomeScreen cơ bản → Trang chủ có thể demo
+  ↓
+[P1] ScannerScreen → Core feature chính
+  ↓
+[P2] OCR List nâng cấp → UX tốt hơn
+  ↓
+[P2] OCR Editor + Rich Text → Biên tập chuyên nghiệp
+  ↓
+[P3] Articles + ArticleDetail → Nội dung & SEO
+  ↓
+[P3] Account OCR Storage → Quản lý tài nguyên
+```

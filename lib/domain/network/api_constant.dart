@@ -170,6 +170,7 @@ class ApiConstant {
   static String ocrJobDetail(String id) => "ocr/jobs/$id";
   static String ocrJobRequeue(String id) => "ocr/jobs/$id/requeue";
   static String ocrJobResult(String id) => "ocr/jobs/$id/result";
+  static String ocrJobSaveResult(String id) => "ocr/jobs/$id/result";
   static String ocrJobAssets(String id) => "ocr/jobs/$id/assets";
   static String ocrJobExport(String id) => "ocr/jobs/$id/export";
 }

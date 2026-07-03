@@ -1,22 +1,139 @@
 import 'dart:ui';
 
+enum OcrTextPreset { body, h1, h2, h3, caption }
+
+/// Style cơ bản cho text run / line.
+class OcrTextStyleModel {
+  final String? fontFamily;
+  final double? fontSize;
+  final String? colorHex;
+  final bool bold;
+  final bool italic;
+  final bool underline;
+  final String? align;
+  final double? lineHeight;
+  final OcrTextPreset preset;
+
+  const OcrTextStyleModel({
+    this.fontFamily,
+    this.fontSize,
+    this.colorHex,
+    this.bold = false,
+    this.italic = false,
+    this.underline = false,
+    this.align,
+    this.lineHeight,
+    this.preset = OcrTextPreset.body,
+  });
+
+  factory OcrTextStyleModel.fromJson(Map<String, dynamic> json) {
+    return OcrTextStyleModel(
+      fontFamily: json['fontFamily']?.toString(),
+      fontSize: _toNullableDouble(json['fontSize']),
+      colorHex: json['colorHex']?.toString(),
+      bold: _toBool(json['bold']),
+      italic: _toBool(json['italic']),
+      underline: _toBool(json['underline']),
+      align: json['align']?.toString(),
+      lineHeight: _toNullableDouble(json['lineHeight']),
+      preset: _parsePreset(json['preset']),
+    );
+  }
+
+  OcrTextStyleModel copyWith({
+    String? fontFamily,
+    double? fontSize,
+    String? colorHex,
+    bool? bold,
+    bool? italic,
+    bool? underline,
+    String? align,
+    double? lineHeight,
+    OcrTextPreset? preset,
+  }) {
+    return OcrTextStyleModel(
+      fontFamily: fontFamily ?? this.fontFamily,
+      fontSize: fontSize ?? this.fontSize,
+      colorHex: colorHex ?? this.colorHex,
+      bold: bold ?? this.bold,
+      italic: italic ?? this.italic,
+      underline: underline ?? this.underline,
+      align: align ?? this.align,
+      lineHeight: lineHeight ?? this.lineHeight,
+      preset: preset ?? this.preset,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (fontFamily != null) 'fontFamily': fontFamily,
+      if (fontSize != null) 'fontSize': fontSize,
+      if (colorHex != null) 'colorHex': colorHex,
+      'bold': bold,
+      'italic': italic,
+      'underline': underline,
+      if (align != null) 'align': align,
+      if (lineHeight != null) 'lineHeight': lineHeight,
+      'preset': preset.name,
+    };
+  }
+}
+
+/// Một đoạn text có style riêng (phục vụ rich text editor).
+class OcrTextRunModel {
+  final String text;
+  final OcrTextStyleModel? style;
+
+  const OcrTextRunModel({required this.text, this.style});
+
+  factory OcrTextRunModel.fromJson(Map<String, dynamic> json) {
+    final rawStyle = json['style'];
+    return OcrTextRunModel(
+      text: json['text']?.toString() ?? '',
+      style: rawStyle is Map<String, dynamic>
+          ? OcrTextStyleModel.fromJson(rawStyle)
+          : null,
+    );
+  }
+
+  OcrTextRunModel copyWith({String? text, OcrTextStyleModel? style}) {
+    return OcrTextRunModel(text: text ?? this.text, style: style ?? this.style);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text,
+      if (style != null) 'style': style!.toJson(),
+    };
+  }
+}
+
 /// Một dòng text OCR kèm bounding box (polygon 4 điểm) và độ tin cậy.
 class OcrLineModel {
   final String text;
   final double confidence;
   final List<Offset> bbox;
+  final OcrTextStyleModel? style;
+  final List<OcrTextRunModel> runs;
 
   const OcrLineModel({
     required this.text,
     this.confidence = 0,
     this.bbox = const [],
+    this.style,
+    this.runs = const [],
   });
 
   factory OcrLineModel.fromJson(Map<String, dynamic> json) {
+    final rawStyle = json['style'];
     return OcrLineModel(
       text: json['text']?.toString() ?? '',
       confidence: _toDouble(json['confidence']),
       bbox: _parseBbox(json['bbox']),
+      style: rawStyle is Map<String, dynamic>
+          ? OcrTextStyleModel.fromJson(rawStyle)
+          : null,
+      runs: _parseList(json['runs'], OcrTextRunModel.fromJson),
     );
   }
 
@@ -24,12 +141,26 @@ class OcrLineModel {
     String? text,
     double? confidence,
     List<Offset>? bbox,
+    OcrTextStyleModel? style,
+    List<OcrTextRunModel>? runs,
   }) {
     return OcrLineModel(
       text: text ?? this.text,
       confidence: confidence ?? this.confidence,
       bbox: bbox ?? this.bbox,
+      style: style ?? this.style,
+      runs: runs ?? this.runs,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text,
+      'confidence': confidence,
+      'bbox': bbox.map((p) => [p.dx, p.dy]).toList(),
+      if (style != null) 'style': style!.toJson(),
+      if (runs.isNotEmpty) 'runs': runs.map((e) => e.toJson()).toList(),
+    };
   }
 }
 
@@ -87,6 +218,17 @@ class OcrAssetModel {
       source: source ?? this.source,
       localImagePath: localImagePath ?? this.localImagePath,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'bbox': bbox.map((p) => [p.dx, p.dy]).toList(),
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (imageKey != null) 'imageKey': imageKey,
+      if (tableHtml != null) 'tableHtml': tableHtml,
+      if (source != null) 'source': source,
+    };
   }
 }
 
@@ -152,6 +294,18 @@ class OcrPageModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'page': page,
+      'width': width,
+      'height': height,
+      'lines': lines.map((e) => e.toJson()).toList(),
+      'images': images.map((e) => e.toJson()).toList(),
+      'tables': tables.map((e) => e.toJson()).toList(),
+      if (pageImageUrl != null) 'pageImageUrl': pageImageUrl,
+    };
+  }
+
   String get mergedText =>
       text?.trim().isNotEmpty == true
           ? text!
@@ -197,4 +351,33 @@ double _toDouble(dynamic value) {
   if (value is double) return value;
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double? _toNullableDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+bool _toBool(dynamic value) {
+  if (value is bool) return value;
+  final raw = value?.toString().toLowerCase().trim();
+  return raw == '1' || raw == 'true' || raw == 'yes' || raw == 'on';
+}
+
+OcrTextPreset _parsePreset(dynamic value) {
+  final raw = value?.toString().toLowerCase().trim();
+  switch (raw) {
+    case 'h1':
+      return OcrTextPreset.h1;
+    case 'h2':
+      return OcrTextPreset.h2;
+    case 'h3':
+      return OcrTextPreset.h3;
+    case 'caption':
+      return OcrTextPreset.caption;
+    default:
+      return OcrTextPreset.body;
+  }
 }
