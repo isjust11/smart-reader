@@ -2540,4 +2540,218 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreDefault => 'Restore default';
+
+  @override
+  String get ocr_editor => 'OCR Editor';
+
+  @override
+  String get ocr_more_actions => 'More actions';
+
+  @override
+  String get ocr_redo => 'Redo';
+
+  @override
+  String get ocr_save_edits => 'Save edits';
+
+  @override
+  String get ocr_unsaved => 'Unsaved';
+
+  @override
+  String get ocr_preview_edited => 'Preview edited data';
+
+  @override
+  String get ocr_normalize_page_preset => 'Normalize preset for current page';
+
+  @override
+  String get ocr_apply_body_page => 'Apply Body to whole page';
+
+  @override
+  String get ocr_export_txt => 'Export .txt';
+
+  @override
+  String get ocr_export_searchable_pdf => 'Export searchable PDF';
+
+  @override
+  String get ocr_requeue => 'Reprocess (update page images & bbox)';
+
+  @override
+  String get ocr_load_error => 'Failed to load data';
+
+  @override
+  String get ocr_normalize_page_success =>
+      'Normalized preset for the current page.';
+
+  @override
+  String get ocr_apply_body_page_success =>
+      'Applied Body preset to all lines on the current page.';
+
+  @override
+  String get ocr_requeue_success =>
+      'Reprocess request sent. Go back to the job list to track progress.';
+
+  @override
+  String get ocr_export_txt_success => 'Exported .txt file';
+
+  @override
+  String get ocr_export_pdf_processing =>
+      'Processing searchable PDF. Check back in a few seconds.';
+
+  @override
+  String get ocr_save_success => 'OCR edits saved.';
+
+  @override
+  String get ocr_preview_after_edit => 'Preview after edits';
+
+  @override
+  String ocr_page_label(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String get ocr_editor_empty_hint =>
+      'Tap a bbox region on the preview to edit text or images.';
+
+  @override
+  String get ocr_add_line_missing_hint =>
+      'OCR missed some text? Add a line manually to enter it.';
+
+  @override
+  String get ocr_add_line_new => 'Add new text line';
+
+  @override
+  String get ocr_line_header => 'Text line';
+
+  @override
+  String get ocr_line_empty_hint =>
+      'No content yet — OCR did not recognize this area. Enter text below.';
+
+  @override
+  String ocr_confidence(String percent) {
+    return 'Confidence: $percent%';
+  }
+
+  @override
+  String get ocr_content => 'Content';
+
+  @override
+  String get ocr_prev_missing_line => 'Previous missing line';
+
+  @override
+  String get ocr_next_missing_line => 'Next missing line';
+
+  @override
+  String get ocr_move_up => 'Move up';
+
+  @override
+  String get ocr_move_down => 'Move down';
+
+  @override
+  String get ocr_delete_line => 'Delete line';
+
+  @override
+  String get ocr_bold => 'Bold';
+
+  @override
+  String get ocr_italic => 'Italic';
+
+  @override
+  String get ocr_underline => 'Underline';
+
+  @override
+  String get ocr_clear_format => 'Clear formatting';
+
+  @override
+  String get ocr_align_left => 'Align left';
+
+  @override
+  String get ocr_align_center => 'Align center';
+
+  @override
+  String get ocr_align_right => 'Align right';
+
+  @override
+  String get ocr_align_justify => 'Justify';
+
+  @override
+  String get ocr_uppercase => 'UPPERCASE';
+
+  @override
+  String get ocr_lowercase => 'lowercase';
+
+  @override
+  String get ocr_style_tooltip => 'Formatting is saved to the style model';
+
+  @override
+  String get ocr_figure => 'Figure';
+
+  @override
+  String get ocr_embedded_image => 'Embedded image';
+
+  @override
+  String get ocr_change_image => 'Change image';
+
+  @override
+  String get ocr_delete_image => 'Delete image';
+
+  @override
+  String get ocr_table => 'Table';
+
+  @override
+  String get ocr_table_html => 'Table HTML';
+
+  @override
+  String get ocr_delete_table => 'Delete table';
+
+  @override
+  String get ocr_add_line_selected_hint =>
+      'Drag the center to move, drag left/right edges to resize, then tap Insert.';
+
+  @override
+  String get ocr_add_line_draw_hint =>
+      'Tap or drag horizontally on the preview to place a line (height matches document lines).';
+
+  @override
+  String get ocr_add_line => 'Add line';
+
+  @override
+  String get ocr_redraw => 'Redraw';
+
+  @override
+  String get ocr_insert => 'Insert';
+
+  @override
+  String get ocr_zoom_out => 'Zoom out';
+
+  @override
+  String get ocr_zoom_reset => 'Reset zoom';
+
+  @override
+  String get ocr_zoom_in => 'Zoom in';
+
+  @override
+  String get ocr_hide_document_background => 'Hide document background';
+
+  @override
+  String get ocr_show_document_background => 'Show document background';
+
+  @override
+  String get ocr_no_source_file => 'No source file to preview.';
+
+  @override
+  String get ocr_pdf_render_failed => 'Could not render PDF page.';
+
+  @override
+  String get ocr_preset_body => 'Body';
+
+  @override
+  String get ocr_preset_h1 => 'H1';
+
+  @override
+  String get ocr_preset_h2 => 'H2';
+
+  @override
+  String get ocr_preset_h3 => 'H3';
+
+  @override
+  String get ocr_preset_caption => 'Caption';
 }

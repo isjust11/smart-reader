@@ -7327,6 +7327,576 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Trình chỉnh sửa OCR`
+  String get ocr_editor {
+    return Intl.message(
+      'Trình chỉnh sửa OCR',
+      name: 'ocr_editor',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Thêm thao tác`
+  String get ocr_more_actions {
+    return Intl.message(
+      'Thêm thao tác',
+      name: 'ocr_more_actions',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Làm lại`
+  String get ocr_redo {
+    return Intl.message('Làm lại', name: 'ocr_redo', desc: '', args: []);
+  }
+
+  /// `Lưu chỉnh sửa`
+  String get ocr_save_edits {
+    return Intl.message(
+      'Lưu chỉnh sửa',
+      name: 'ocr_save_edits',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chưa lưu`
+  String get ocr_unsaved {
+    return Intl.message('Chưa lưu', name: 'ocr_unsaved', desc: '', args: []);
+  }
+
+  /// `Preview dữ liệu đã sửa`
+  String get ocr_preview_edited {
+    return Intl.message(
+      'Preview dữ liệu đã sửa',
+      name: 'ocr_preview_edited',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chuẩn hóa preset trang hiện tại`
+  String get ocr_normalize_page_preset {
+    return Intl.message(
+      'Chuẩn hóa preset trang hiện tại',
+      name: 'ocr_normalize_page_preset',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Áp Body cho toàn trang`
+  String get ocr_apply_body_page {
+    return Intl.message(
+      'Áp Body cho toàn trang',
+      name: 'ocr_apply_body_page',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất .txt`
+  String get ocr_export_txt {
+    return Intl.message(
+      'Xuất .txt',
+      name: 'ocr_export_txt',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất searchable PDF`
+  String get ocr_export_searchable_pdf {
+    return Intl.message(
+      'Xuất searchable PDF',
+      name: 'ocr_export_searchable_pdf',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xử lý lại (cập nhật ảnh trang, bbox)`
+  String get ocr_requeue {
+    return Intl.message(
+      'Xử lý lại (cập nhật ảnh trang, bbox)',
+      name: 'ocr_requeue',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Lỗi tải dữ liệu`
+  String get ocr_load_error {
+    return Intl.message(
+      'Lỗi tải dữ liệu',
+      name: 'ocr_load_error',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã chuẩn hóa preset cho trang hiện tại.`
+  String get ocr_normalize_page_success {
+    return Intl.message(
+      'Đã chuẩn hóa preset cho trang hiện tại.',
+      name: 'ocr_normalize_page_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã áp Body cho toàn bộ dòng của trang hiện tại.`
+  String get ocr_apply_body_page_success {
+    return Intl.message(
+      'Đã áp Body cho toàn bộ dòng của trang hiện tại.',
+      name: 'ocr_apply_body_page_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.`
+  String get ocr_requeue_success {
+    return Intl.message(
+      'Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.',
+      name: 'ocr_requeue_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã xuất file .txt`
+  String get ocr_export_txt_success {
+    return Intl.message(
+      'Đã xuất file .txt',
+      name: 'ocr_export_txt_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.`
+  String get ocr_export_pdf_processing {
+    return Intl.message(
+      'Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.',
+      name: 'ocr_export_pdf_processing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã lưu chỉnh sửa OCR.`
+  String get ocr_save_success {
+    return Intl.message(
+      'Đã lưu chỉnh sửa OCR.',
+      name: 'ocr_save_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preview sau chỉnh sửa`
+  String get ocr_preview_after_edit {
+    return Intl.message(
+      'Preview sau chỉnh sửa',
+      name: 'ocr_preview_after_edit',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Trang {page}`
+  String ocr_page_label(int page) {
+    return Intl.message(
+      'Trang $page',
+      name: 'ocr_page_label',
+      desc: '',
+      args: [page],
+    );
+  }
+
+  /// `Chạm vào vùng bbox trên preview để chỉnh sửa text hoặc hình ảnh.`
+  String get ocr_editor_empty_hint {
+    return Intl.message(
+      'Chạm vào vùng bbox trên preview để chỉnh sửa text hoặc hình ảnh.',
+      name: 'ocr_editor_empty_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `OCR bỏ sót một đoạn text? Thêm dòng thủ công để nhập.`
+  String get ocr_add_line_missing_hint {
+    return Intl.message(
+      'OCR bỏ sót một đoạn text? Thêm dòng thủ công để nhập.',
+      name: 'ocr_add_line_missing_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Thêm dòng text mới`
+  String get ocr_add_line_new {
+    return Intl.message(
+      'Thêm dòng text mới',
+      name: 'ocr_add_line_new',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Dòng văn bản`
+  String get ocr_line_header {
+    return Intl.message(
+      'Dòng văn bản',
+      name: 'ocr_line_header',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chưa có nội dung — OCR không nhận dạng được, hãy nhập tay bên dưới.`
+  String get ocr_line_empty_hint {
+    return Intl.message(
+      'Chưa có nội dung — OCR không nhận dạng được, hãy nhập tay bên dưới.',
+      name: 'ocr_line_empty_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Độ tin cậy: {percent}%`
+  String ocr_confidence(String percent) {
+    return Intl.message(
+      'Độ tin cậy: $percent%',
+      name: 'ocr_confidence',
+      desc: '',
+      args: [percent],
+    );
+  }
+
+  /// `Nội dung`
+  String get ocr_content {
+    return Intl.message('Nội dung', name: 'ocr_content', desc: '', args: []);
+  }
+
+  /// `Dòng thiếu trước`
+  String get ocr_prev_missing_line {
+    return Intl.message(
+      'Dòng thiếu trước',
+      name: 'ocr_prev_missing_line',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Dòng thiếu kế`
+  String get ocr_next_missing_line {
+    return Intl.message(
+      'Dòng thiếu kế',
+      name: 'ocr_next_missing_line',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đưa lên`
+  String get ocr_move_up {
+    return Intl.message('Đưa lên', name: 'ocr_move_up', desc: '', args: []);
+  }
+
+  /// `Đưa xuống`
+  String get ocr_move_down {
+    return Intl.message('Đưa xuống', name: 'ocr_move_down', desc: '', args: []);
+  }
+
+  /// `Xóa dòng`
+  String get ocr_delete_line {
+    return Intl.message(
+      'Xóa dòng',
+      name: 'ocr_delete_line',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đậm`
+  String get ocr_bold {
+    return Intl.message('Đậm', name: 'ocr_bold', desc: '', args: []);
+  }
+
+  /// `Nghiêng`
+  String get ocr_italic {
+    return Intl.message('Nghiêng', name: 'ocr_italic', desc: '', args: []);
+  }
+
+  /// `Gạch chân`
+  String get ocr_underline {
+    return Intl.message('Gạch chân', name: 'ocr_underline', desc: '', args: []);
+  }
+
+  /// `Xóa định dạng`
+  String get ocr_clear_format {
+    return Intl.message(
+      'Xóa định dạng',
+      name: 'ocr_clear_format',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Căn trái`
+  String get ocr_align_left {
+    return Intl.message('Căn trái', name: 'ocr_align_left', desc: '', args: []);
+  }
+
+  /// `Căn giữa`
+  String get ocr_align_center {
+    return Intl.message(
+      'Căn giữa',
+      name: 'ocr_align_center',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Căn phải`
+  String get ocr_align_right {
+    return Intl.message(
+      'Căn phải',
+      name: 'ocr_align_right',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Căn đều`
+  String get ocr_align_justify {
+    return Intl.message(
+      'Căn đều',
+      name: 'ocr_align_justify',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `VIẾT HOA`
+  String get ocr_uppercase {
+    return Intl.message('VIẾT HOA', name: 'ocr_uppercase', desc: '', args: []);
+  }
+
+  /// `viết thường`
+  String get ocr_lowercase {
+    return Intl.message(
+      'viết thường',
+      name: 'ocr_lowercase',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Định dạng đang lưu vào style model`
+  String get ocr_style_tooltip {
+    return Intl.message(
+      'Định dạng đang lưu vào style model',
+      name: 'ocr_style_tooltip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Hình minh họa`
+  String get ocr_figure {
+    return Intl.message(
+      'Hình minh họa',
+      name: 'ocr_figure',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Ảnh nhúng`
+  String get ocr_embedded_image {
+    return Intl.message(
+      'Ảnh nhúng',
+      name: 'ocr_embedded_image',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đổi ảnh`
+  String get ocr_change_image {
+    return Intl.message(
+      'Đổi ảnh',
+      name: 'ocr_change_image',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xóa ảnh`
+  String get ocr_delete_image {
+    return Intl.message(
+      'Xóa ảnh',
+      name: 'ocr_delete_image',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Bảng`
+  String get ocr_table {
+    return Intl.message('Bảng', name: 'ocr_table', desc: '', args: []);
+  }
+
+  /// `HTML bảng`
+  String get ocr_table_html {
+    return Intl.message(
+      'HTML bảng',
+      name: 'ocr_table_html',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xóa bảng`
+  String get ocr_delete_table {
+    return Intl.message(
+      'Xóa bảng',
+      name: 'ocr_delete_table',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Kéo giữa để di chuyển, kéo mép trái/phải để chỉnh rộng, bấm Insert để chèn.`
+  String get ocr_add_line_selected_hint {
+    return Intl.message(
+      'Kéo giữa để di chuyển, kéo mép trái/phải để chỉnh rộng, bấm Insert để chèn.',
+      name: 'ocr_add_line_selected_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chạm hoặc kéo ngang trên preview để đặt dòng (chiều cao khớp dòng trong tài liệu).`
+  String get ocr_add_line_draw_hint {
+    return Intl.message(
+      'Chạm hoặc kéo ngang trên preview để đặt dòng (chiều cao khớp dòng trong tài liệu).',
+      name: 'ocr_add_line_draw_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Thêm dòng`
+  String get ocr_add_line {
+    return Intl.message('Thêm dòng', name: 'ocr_add_line', desc: '', args: []);
+  }
+
+  /// `Vẽ lại`
+  String get ocr_redraw {
+    return Intl.message('Vẽ lại', name: 'ocr_redraw', desc: '', args: []);
+  }
+
+  /// `Insert`
+  String get ocr_insert {
+    return Intl.message('Insert', name: 'ocr_insert', desc: '', args: []);
+  }
+
+  /// `Thu nhỏ`
+  String get ocr_zoom_out {
+    return Intl.message('Thu nhỏ', name: 'ocr_zoom_out', desc: '', args: []);
+  }
+
+  /// `Về kích thước gốc`
+  String get ocr_zoom_reset {
+    return Intl.message(
+      'Về kích thước gốc',
+      name: 'ocr_zoom_reset',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Phóng to`
+  String get ocr_zoom_in {
+    return Intl.message('Phóng to', name: 'ocr_zoom_in', desc: '', args: []);
+  }
+
+  /// `Ẩn nền tài liệu`
+  String get ocr_hide_document_background {
+    return Intl.message(
+      'Ẩn nền tài liệu',
+      name: 'ocr_hide_document_background',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Hiện nền tài liệu`
+  String get ocr_show_document_background {
+    return Intl.message(
+      'Hiện nền tài liệu',
+      name: 'ocr_show_document_background',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Không có file gốc để preview.`
+  String get ocr_no_source_file {
+    return Intl.message(
+      'Không có file gốc để preview.',
+      name: 'ocr_no_source_file',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Không render được trang PDF.`
+  String get ocr_pdf_render_failed {
+    return Intl.message(
+      'Không render được trang PDF.',
+      name: 'ocr_pdf_render_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Body`
+  String get ocr_preset_body {
+    return Intl.message('Body', name: 'ocr_preset_body', desc: '', args: []);
+  }
+
+  /// `H1`
+  String get ocr_preset_h1 {
+    return Intl.message('H1', name: 'ocr_preset_h1', desc: '', args: []);
+  }
+
+  /// `H2`
+  String get ocr_preset_h2 {
+    return Intl.message('H2', name: 'ocr_preset_h2', desc: '', args: []);
+  }
+
+  /// `H3`
+  String get ocr_preset_h3 {
+    return Intl.message('H3', name: 'ocr_preset_h3', desc: '', args: []);
+  }
+
+  /// `Caption`
+  String get ocr_preset_caption {
+    return Intl.message(
+      'Caption',
+      name: 'ocr_preset_caption',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

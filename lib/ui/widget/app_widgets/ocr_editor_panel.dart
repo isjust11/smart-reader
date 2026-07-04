@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/domain/data/models/models.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
 import 'package:readbox/res/app_size.dart';
 
 /// Panel chỉnh sửa text / ảnh / bảng cho vùng bbox đã chọn.
@@ -16,12 +17,6 @@ class OcrEditorPanel extends StatefulWidget {
   final ValueChanged<OcrTextPreset> onLinePresetChanged;
   final ValueChanged<String> onTableHtmlChanged;
   final ValueChanged<String> onImageReplaced;
-  final VoidCallback? onDeleteLine;
-  final VoidCallback? onAddLine;
-  final VoidCallback? onNextMissingLine;
-  final VoidCallback? onPrevMissingLine;
-  final VoidCallback? onMoveLineUp;
-  final VoidCallback? onMoveLineDown;
   final VoidCallback? onDeleteImage;
   final VoidCallback? onDeleteTable;
 
@@ -34,12 +29,6 @@ class OcrEditorPanel extends StatefulWidget {
     required this.onLinePresetChanged,
     required this.onTableHtmlChanged,
     required this.onImageReplaced,
-    this.onDeleteLine,
-    this.onAddLine,
-    this.onNextMissingLine,
-    this.onPrevMissingLine,
-    this.onMoveLineUp,
-    this.onMoveLineDown,
     this.onDeleteImage,
     this.onDeleteTable,
   });
@@ -71,9 +60,59 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
   void didUpdateWidget(covariant OcrEditorPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection != widget.selection ||
-        oldWidget.page.page != widget.page.page) {
+        oldWidget.page.page != widget.page.page ||
+        _hasExternalSelectionUpdate(oldWidget)) {
       _syncControllers();
     }
+  }
+
+  bool _hasExternalSelectionUpdate(OcrEditorPanel oldWidget) {
+    final sel = widget.selection;
+    if (sel == null) return false;
+
+    switch (sel.kind) {
+      case OcrEditorSelectionKind.line:
+        if (sel.index >= widget.page.lines.length ||
+            sel.index >= oldWidget.page.lines.length) {
+          return true;
+        }
+        final oldLine = oldWidget.page.lines[sel.index];
+        final newLine = widget.page.lines[sel.index];
+        return !_styleEquals(oldLine.style, newLine.style) ||
+            (oldLine.text != newLine.text &&
+                newLine.text != _textController.text);
+      case OcrEditorSelectionKind.table:
+        if (sel.index >= widget.page.tables.length ||
+            sel.index >= oldWidget.page.tables.length) {
+          return true;
+        }
+        final oldHtml = oldWidget.page.tables[sel.index].tableHtml ?? '';
+        final newHtml = widget.page.tables[sel.index].tableHtml ?? '';
+        return oldHtml != newHtml && newHtml != _tableController.text;
+      case OcrEditorSelectionKind.image:
+        if (sel.index >= widget.page.images.length ||
+            sel.index >= oldWidget.page.images.length) {
+          return true;
+        }
+        final oldAsset = oldWidget.page.images[sel.index];
+        final newAsset = widget.page.images[sel.index];
+        return oldAsset.localImagePath != newAsset.localImagePath ||
+            oldAsset.imageUrl != newAsset.imageUrl;
+    }
+  }
+
+  bool _styleEquals(OcrTextStyleModel? a, OcrTextStyleModel? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return false;
+    return a.preset == b.preset &&
+        a.fontFamily == b.fontFamily &&
+        a.fontSize == b.fontSize &&
+        a.colorHex == b.colorHex &&
+        a.bold == b.bold &&
+        a.italic == b.italic &&
+        a.underline == b.underline &&
+        a.align == b.align &&
+        a.lineHeight == b.lineHeight;
   }
 
   void _syncControllers() {
@@ -94,7 +133,9 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
         if (sel.index < widget.page.lines.length) {
           final line = widget.page.lines[sel.index];
           final text = line.text;
-          _textController.text = text;
+          if (_textController.text != text) {
+            _textController.text = text;
+          }
           final style = line.style ?? const OcrTextStyleModel();
           setState(() {
             _lineStyle = style;
@@ -106,8 +147,10 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
         break;
       case OcrEditorSelectionKind.table:
         if (sel.index < widget.page.tables.length) {
-          _tableController.text =
-              widget.page.tables[sel.index].tableHtml ?? '';
+          final html = widget.page.tables[sel.index].tableHtml ?? '';
+          if (_tableController.text != html) {
+            _tableController.text = html;
+          }
         }
         break;
       case OcrEditorSelectionKind.image:
@@ -138,7 +181,6 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
-          left: BorderSide(color: colorScheme.outline.withValues(alpha: 0.15)),
           top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.15)),
         ),
       ),
@@ -149,36 +191,24 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
   }
 
   Widget _buildEmpty(ColorScheme colorScheme) {
+    final l = AppLocalizations.current;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.touch_app, size: 48, color: colorScheme.outline),
+            Icon(Icons.touch_app, size: 40, color: colorScheme.outline),
             const SizedBox(height: 12),
             Text(
-              'Chạm vào vùng bbox trên preview để chỉnh sửa text hoặc hình ảnh.',
+              l.ocr_editor_empty_hint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: AppSize.fontSizeSmall,
+              ),
             ),
-            if (widget.onAddLine != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'OCR bỏ sót một đoạn text? Thêm dòng thủ công để nhập.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: AppSize.fontSizeSmall,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: widget.onAddLine,
-                icon: const Icon(Icons.add_box_outlined),
-                label: const Text('Thêm dòng text mới'),
-              ),
-            ],
           ],
         ),
       ),
@@ -201,117 +231,96 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
   }
 
   Widget _buildLineEditor(ColorScheme colorScheme, int index) {
+    final l = AppLocalizations.current;
     final line = widget.page.lines[index];
     final needsInput = line.text.trim().isEmpty;
     return Column(
       children: [
-        _buildFormatToolbar(colorScheme),
+        _buildTextFormatToolbar(colorScheme),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            // padding: const EdgeInsets.all(16),
             children: [
-              _header('Dòng văn bản', Icons.text_fields, colorScheme),
-              const SizedBox(height: 8),
-              _buildPresetChips(colorScheme),
-              const SizedBox(height: 12),
-              if (needsInput)
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.shade700, width: 1),
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+                  border: Border(
+                    bottom: BorderSide(color: colorScheme.outlineVariant),
                   ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
-                      Icon(Icons.edit_note, size: 18, color: Colors.amber.shade800),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Chưa có nội dung — OCR không nhận dạng được, hãy nhập tay bên dưới.',
-                          style: TextStyle(
-                            fontSize: AppSize.fontSizeSmall,
-                            color: colorScheme.onSurface,
-                          ),
+                      _header(l.ocr_line_header, Icons.text_fields, colorScheme),
+                      const Spacer(),
+                      Text(
+                        l.ocr_confidence(
+                          (line.confidence * 100).toStringAsFixed(0),
+                        ),
+                        style: TextStyle(
+                          fontSize: AppSize.fontSizeSmall,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                Text(
-                  'Độ tin cậy: ${(line.confidence * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    fontSize: AppSize.fontSizeSmall,
-                    color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (needsInput)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade700, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note, size: 18, color: Colors.amber.shade800),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l.ocr_line_empty_hint,
+                            style: TextStyle(
+                              fontSize: AppSize.fontSizeSmall,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
-              TextField(
-                key: ValueKey('line-text-$index'),
-                controller: _textController,
-                maxLines: 8,
-                autofocus: needsInput,
-                decoration: const InputDecoration(
-                  labelText: 'Nội dung',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                onChanged: (v) => widget.onLineTextChanged(v),
-              ),
-              const SizedBox(height: 16),
-              if (widget.onPrevMissingLine != null || widget.onNextMissingLine != null)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (widget.onPrevMissingLine != null)
-                      OutlinedButton.icon(
-                        onPressed: widget.onPrevMissingLine,
-                        icon: const Icon(Icons.keyboard_arrow_up),
-                        label: const Text('Dòng thiếu trước'),
-                      ),
-                    if (widget.onNextMissingLine != null)
-                      OutlinedButton.icon(
-                        onPressed: widget.onNextMissingLine,
-                        icon: const Icon(Icons.keyboard_arrow_down),
-                        label: const Text('Dòng thiếu kế'),
-                      ),
-                  ],
-                ),
-              if (widget.onPrevMissingLine != null || widget.onNextMissingLine != null)
-                const SizedBox(height: 16),
-              if (widget.onMoveLineUp != null || widget.onMoveLineDown != null)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (widget.onMoveLineUp != null)
-                      OutlinedButton.icon(
-                        onPressed: widget.onMoveLineUp,
-                        icon: const Icon(Icons.arrow_upward),
-                        label: const Text('Đưa lên'),
-                      ),
-                    if (widget.onMoveLineDown != null)
-                      OutlinedButton.icon(
-                        onPressed: widget.onMoveLineDown,
-                        icon: const Icon(Icons.arrow_downward),
-                        label: const Text('Đưa xuống'),
-                      ),
-                  ],
-                ),
-              if (widget.onMoveLineUp != null || widget.onMoveLineDown != null)
-                const SizedBox(height: 16),
-              if (widget.onDeleteLine != null)
-                OutlinedButton.icon(
-                  onPressed: widget.onDeleteLine,
-                  icon: Icon(Icons.delete_outline, color: colorScheme.error),
-                  label: Text(
-                    'Xóa dòng',
-                    style: TextStyle(color: colorScheme.error),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+                  border: Border(
+                    bottom: BorderSide(color: colorScheme.outlineVariant),
                   ),
                 ),
+                child: TextField(
+                  key: ValueKey('line-text-$index'),
+                  controller: _textController,
+                  maxLines: 8,
+                  autofocus: needsInput,
+                  style: _editorTextStyle(_lineStyle),
+                  decoration: InputDecoration(
+                    labelText: l.ocr_content,
+                    border: const OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (v) => widget.onLineTextChanged(v),
+                ),
+              ),
+              )
             ],
           ),
         ),
@@ -321,7 +330,94 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
 
   // ─── Format toolbar ────────────────────────────────────────────────────────
 
-  Widget _buildFormatToolbar(ColorScheme cs) {
+  Widget _buildTextFormatToolbar(ColorScheme cs) {
+    final l = AppLocalizations.current;
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant),
+          top: BorderSide(color: cs.outlineVariant),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          children: [
+            _toolbarBtn(
+              icon: Icons.format_bold,
+              tooltip: l.ocr_bold,
+              selected: _isBold,
+              onTap: () => _toggleStyle(bold: !_isBold),
+            ),
+            _toolbarBtn(
+              icon: Icons.format_italic,
+              tooltip: l.ocr_italic,
+              selected: _isItalic,
+              onTap: () => _toggleStyle(italic: !_isItalic),
+            ),
+            _toolbarBtn(
+              icon: Icons.format_underlined,
+              tooltip: l.ocr_underline,
+              selected: _isUnderline,
+              onTap: () => _toggleStyle(underline: !_isUnderline),
+            ),
+            _vDivider(cs),
+            _toolbarBtn(
+              icon: Icons.format_align_left,
+              tooltip: l.ocr_align_left,
+              selected: _lineStyle.align == 'left',
+              onTap: () => _setAlign('left'),
+            ),
+            _toolbarBtn(
+              icon: Icons.format_align_center,
+              tooltip: l.ocr_align_center,
+              selected: _lineStyle.align == 'center',
+              onTap: () => _setAlign('center'),
+            ),
+            _toolbarBtn(
+              icon: Icons.format_align_right,
+              tooltip: l.ocr_align_right,
+              selected: _lineStyle.align == 'right',
+              onTap: () => _setAlign('right'),
+            ),
+            _toolbarBtn(
+              icon: Icons.format_align_justify,
+              tooltip: l.ocr_align_justify,
+              selected: _lineStyle.align == 'justify',
+              onTap: () => _setAlign('justify'),
+            ),
+            _vDivider(cs),
+            _toolbarBtn(
+              icon: Icons.format_clear,
+              tooltip: l.ocr_clear_format,
+              selected: false,
+              onTap: _clearFormatting,
+            ),
+            _toolbarBtn(
+              icon: Icons.text_fields_rounded,
+              tooltip: l.ocr_uppercase,
+              selected: false,
+              onTap: () => _applyCase(true),
+            ),
+            _toolbarBtn(
+              icon: Icons.text_format_rounded,
+              tooltip: l.ocr_lowercase,
+              selected: false,
+              onTap: () => _applyCase(false),
+            ),
+            _vDivider(cs),
+            _buildPresetDropdown(cs),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageToolbar(ColorScheme cs) {
+    final l = AppLocalizations.current;
     return Container(
       height: 44,
       decoration: BoxDecoration(
@@ -334,90 +430,105 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
       child: Row(
         children: [
           _toolbarBtn(
-            icon: Icons.format_bold,
-            tooltip: 'Đậm',
-            selected: _isBold,
-            onTap: () => _toggleStyle(bold: !_isBold),
-          ),
-          _toolbarBtn(
-            icon: Icons.format_italic,
-            tooltip: 'Nghiêng',
-            selected: _isItalic,
-            onTap: () => _toggleStyle(italic: !_isItalic),
-          ),
-          _toolbarBtn(
-            icon: Icons.format_underlined,
-            tooltip: 'Gạch chân',
-            selected: _isUnderline,
-            onTap: () => _toggleStyle(underline: !_isUnderline),
-          ),
-          Container(width: 1, height: 24, margin: const EdgeInsets.symmetric(horizontal: 4), color: cs.outlineVariant),
-          _toolbarBtn(
-            icon: Icons.format_clear,
-            tooltip: 'Xóa định dạng',
+            icon: Icons.photo_library_outlined,
+            tooltip: l.ocr_change_image,
             selected: false,
-            onTap: _clearFormatting,
+            onTap: _pickImage,
           ),
-          Container(width: 1, height: 24, margin: const EdgeInsets.symmetric(horizontal: 4), color: cs.outlineVariant),
-          _toolbarBtn(
-            icon: Icons.text_fields_rounded,
-            tooltip: 'VIẾT HOA',
-            selected: false,
-            onTap: () => _applyCase(true),
-          ),
-          _toolbarBtn(
-            icon: Icons.text_format_rounded,
-            tooltip: 'viết thường',
-            selected: false,
-            onTap: () => _applyCase(false),
-          ),
-          const Spacer(),
-          if (_lineStyle.fontSize != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Text(
-                '${_lineStyle.fontSize!.toStringAsFixed(0)}pt',
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-              ),
+          if (widget.onDeleteImage != null)
+            _toolbarBtn(
+              icon: Icons.delete_outline,
+              tooltip: l.ocr_delete_image,
+              selected: false,
+              onTap: widget.onDeleteImage!,
+              destructive: true,
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Tooltip(
-              message: 'Định dạng đang lưu vào style model',
-              child: Text(
-                'STYLE',
-                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildPresetChips(ColorScheme cs) {
-    final presets = <(String, OcrTextPreset)>[
-      ('Body', OcrTextPreset.body),
-      ('H1', OcrTextPreset.h1),
-      ('H2', OcrTextPreset.h2),
-      ('H3', OcrTextPreset.h3),
-      ('Caption', OcrTextPreset.caption),
-    ];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: presets
-          .map(
-            (entry) => ChoiceChip(
-              label: Text(entry.$1),
-              selected: _lineStyle.preset == entry.$2,
-              onSelected: (_) {
-                widget.onLinePresetChanged(entry.$2);
-                // UI sẽ sync lại từ state mới ở frame kế tiếp.
-              },
+  Widget _buildTableToolbar(ColorScheme cs) {
+    final l = AppLocalizations.current;
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant),
+          top: BorderSide(color: cs.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (widget.onDeleteTable != null)
+            _toolbarBtn(
+              icon: Icons.delete_outline,
+              tooltip: l.ocr_delete_table,
+              selected: false,
+              onTap: widget.onDeleteTable!,
+              destructive: true,
             ),
-          )
-          .toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetDropdown(ColorScheme cs) {
+    final l = AppLocalizations.current;
+    final presets = <(String, OcrTextPreset)>[
+      (l.ocr_preset_body, OcrTextPreset.body),
+      (l.ocr_preset_h1, OcrTextPreset.h1),
+      (l.ocr_preset_h2, OcrTextPreset.h2),
+      (l.ocr_preset_h3, OcrTextPreset.h3),
+      (l.ocr_preset_caption, OcrTextPreset.caption),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<OcrTextPreset>(
+          isDense: true,
+          value: _lineStyle.preset,
+          borderRadius: BorderRadius.circular(8),
+          icon: Icon(Icons.arrow_drop_down, color: cs.onSurfaceVariant, size: 20),
+          selectedItemBuilder: (context) => presets
+              .map(
+                (entry) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    entry.$1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          items: presets
+              .map(
+                (entry) => DropdownMenuItem(
+                  value: entry.$2,
+                  child: Text(entry.$1),
+                ),
+              )
+              .toList(),
+          onChanged: (preset) {
+            if (preset != null) _changePreset(preset);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _vDivider(ColorScheme cs) {
+    return Container(
+      width: 1,
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: cs.outlineVariant,
     );
   }
 
@@ -426,8 +537,14 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
     required String tooltip,
     required bool selected,
     required VoidCallback onTap,
+    bool destructive = false,
   }) {
     final cs = Theme.of(context).colorScheme;
+    final fg = destructive
+        ? cs.error
+        : selected
+            ? cs.onPrimaryContainer
+            : cs.onSurfaceVariant;
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -442,8 +559,7 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
                   borderRadius: BorderRadius.circular(4),
                 )
               : null,
-          child: Icon(icon, size: 18,
-              color: selected ? cs.onPrimaryContainer : cs.onSurfaceVariant),
+          child: Icon(icon, size: 18, color: fg),
         ),
       ),
     );
@@ -485,7 +601,38 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
     widget.onLineTextChanged(newText);
   }
 
+  void _setAlign(String align) {
+    final next = _lineStyle.copyWith(align: align);
+    widget.onLineStyleChanged(next);
+    setState(() => _lineStyle = next);
+  }
+
+  void _changePreset(OcrTextPreset preset) {
+    widget.onLinePresetChanged(preset);
+  }
+
+  TextStyle _editorTextStyle(OcrTextStyleModel style) {
+    return TextStyle(
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize ?? AppSize.fontSizeMedium,
+      fontWeight: style.bold ? FontWeight.w700 : FontWeight.w400,
+      fontStyle: style.italic ? FontStyle.italic : FontStyle.normal,
+      decoration: style.underline ? TextDecoration.underline : null,
+      height: style.lineHeight,
+      color: _parseColor(style.colorHex) ?? Theme.of(context).colorScheme.onSurface,
+    );
+  }
+
+  Color? _parseColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final value = hex.replaceFirst('#', '');
+    final normalized = value.length == 6 ? 'FF$value' : value;
+    final parsed = int.tryParse(normalized, radix: 16);
+    return parsed == null ? null : Color(parsed);
+  }
+
   Widget _buildImageEditor(ColorScheme colorScheme, int index) {
+    final l = AppLocalizations.current;
     final asset = widget.page.images[index];
     final preview = asset.localImagePath != null
         ? Image.file(File(asset.localImagePath!), fit: BoxFit.contain)
@@ -496,82 +643,72 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
               )
             : const Icon(Icons.image_not_supported));
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        _header(
-          asset.type == 'figure' ? 'Hình minh họa' : 'Ảnh nhúng',
-          Icons.image,
-          colorScheme,
-        ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            height: 180,
-            width: double.infinity,
-            color: colorScheme.surfaceContainerHighest,
-            child: preview,
+        _buildImageToolbar(colorScheme),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _header(
+                asset.type == 'figure' ? l.ocr_figure : l.ocr_embedded_image,
+                Icons.image,
+                colorScheme,
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: preview,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: _pickImage,
-          icon: const Icon(Icons.photo_library_outlined),
-          label: const Text('Đổi ảnh'),
-        ),
-        const SizedBox(height: 8),
-        if (widget.onDeleteImage != null)
-          OutlinedButton.icon(
-            onPressed: widget.onDeleteImage,
-            icon: Icon(Icons.delete_outline, color: colorScheme.error),
-            label: Text(
-              'Xóa ảnh',
-              style: TextStyle(color: colorScheme.error),
-            ),
-          ),
       ],
     );
   }
 
   Widget _buildTableEditor(ColorScheme colorScheme, int index) {
+    final l = AppLocalizations.current;
     final asset = widget.page.tables[index];
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        _header('Bảng', Icons.table_chart, colorScheme),
-        const SizedBox(height: 12),
-        if (asset.imageUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(
-              imageUrl: asset.imageUrl!,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.contain,
-            ),
+        _buildTableToolbar(colorScheme),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _header(l.ocr_table, Icons.table_chart, colorScheme),
+              const SizedBox(height: 12),
+              if (asset.imageUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: asset.imageUrl!,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _tableController,
+                maxLines: 10,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                decoration: InputDecoration(
+                  labelText: l.ocr_table_html,
+                  border: const OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                onChanged: widget.onTableHtmlChanged,
+              ),
+            ],
           ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _tableController,
-          maxLines: 10,
-          decoration: const InputDecoration(
-            labelText: 'HTML bảng',
-            border: OutlineInputBorder(),
-            alignLabelWithHint: true,
-          ),
-          onChanged: widget.onTableHtmlChanged,
         ),
-        const SizedBox(height: 8),
-        if (widget.onDeleteTable != null)
-          OutlinedButton.icon(
-            onPressed: widget.onDeleteTable,
-            icon: Icon(Icons.delete_outline, color: colorScheme.error),
-            label: Text(
-              'Xóa bảng',
-              style: TextStyle(color: colorScheme.error),
-            ),
-          ),
       ],
     );
   }
@@ -579,13 +716,13 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
   Widget _header(String title, IconData icon, ColorScheme colorScheme) {
     return Row(
       children: [
-        Icon(icon, color: colorScheme.primary, size: 22),
+        Icon(icon, color: colorScheme.primary, size: 14),
         const SizedBox(width: 8),
         Text(
           title,
           style: TextStyle(
-            fontSize: AppSize.fontSizeLarge,
-            fontWeight: FontWeight.w600,
+            fontSize: AppSize.fontSizeMedium,
+            fontWeight: FontWeight.w500,
             color: colorScheme.onSurface,
           ),
         ),

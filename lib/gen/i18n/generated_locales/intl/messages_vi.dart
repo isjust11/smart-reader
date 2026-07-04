@@ -23,20 +23,24 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m0(title) =>
       "Bạn có chắc chắn muốn xóa sách \"${title}\" khỏi thư viện?";
 
-  static String m1(current, total) => "Trang ${current}/${total}";
+  static String m1(percent) => "Độ tin cậy: ${percent}%";
 
-  static String m2(error) => "Không thể chia sẻ: ${error}";
+  static String m2(page) => "Trang ${page}";
 
-  static String m3(title) =>
+  static String m3(current, total) => "Trang ${current}/${total}";
+
+  static String m4(error) => "Không thể chia sẻ: ${error}";
+
+  static String m5(title) =>
       "\"${title}\"được chia sẻ từ Readbox. Tải app để đọc sách miễn phí! 📚";
 
-  static String m4(error) => "Lỗi đọc: ${error}";
+  static String m6(error) => "Lỗi đọc: ${error}";
 
-  static String m5(path) => "File đã lưu tại: ${path}";
+  static String m7(path) => "File đã lưu tại: ${path}";
 
-  static String m6(count) => "${count} trang";
+  static String m8(count) => "${count} trang";
 
-  static String m7(count) => "${count} đánh giá";
+  static String m9(count) => "${count} đánh giá";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -839,6 +843,123 @@ class MessageLookup extends MessageLookupByLibrary {
     "notificationsCleared": MessageLookupByLibrary.simpleMessage(
       "Đã xóa tất cả thông báo",
     ),
+    "ocr_add_line": MessageLookupByLibrary.simpleMessage("Thêm dòng"),
+    "ocr_add_line_draw_hint": MessageLookupByLibrary.simpleMessage(
+      "Chạm hoặc kéo ngang trên preview để đặt dòng (chiều cao khớp dòng trong tài liệu).",
+    ),
+    "ocr_add_line_missing_hint": MessageLookupByLibrary.simpleMessage(
+      "OCR bỏ sót một đoạn text? Thêm dòng thủ công để nhập.",
+    ),
+    "ocr_add_line_new": MessageLookupByLibrary.simpleMessage(
+      "Thêm dòng text mới",
+    ),
+    "ocr_add_line_selected_hint": MessageLookupByLibrary.simpleMessage(
+      "Kéo giữa để di chuyển, kéo mép trái/phải để chỉnh rộng, bấm Insert để chèn.",
+    ),
+    "ocr_align_center": MessageLookupByLibrary.simpleMessage("Căn giữa"),
+    "ocr_align_justify": MessageLookupByLibrary.simpleMessage("Căn đều"),
+    "ocr_align_left": MessageLookupByLibrary.simpleMessage("Căn trái"),
+    "ocr_align_right": MessageLookupByLibrary.simpleMessage("Căn phải"),
+    "ocr_apply_body_page": MessageLookupByLibrary.simpleMessage(
+      "Áp Body cho toàn trang",
+    ),
+    "ocr_apply_body_page_success": MessageLookupByLibrary.simpleMessage(
+      "Đã áp Body cho toàn bộ dòng của trang hiện tại.",
+    ),
+    "ocr_bold": MessageLookupByLibrary.simpleMessage("Đậm"),
+    "ocr_change_image": MessageLookupByLibrary.simpleMessage("Đổi ảnh"),
+    "ocr_clear_format": MessageLookupByLibrary.simpleMessage("Xóa định dạng"),
+    "ocr_confidence": m1,
+    "ocr_content": MessageLookupByLibrary.simpleMessage("Nội dung"),
+    "ocr_delete_image": MessageLookupByLibrary.simpleMessage("Xóa ảnh"),
+    "ocr_delete_line": MessageLookupByLibrary.simpleMessage("Xóa dòng"),
+    "ocr_delete_table": MessageLookupByLibrary.simpleMessage("Xóa bảng"),
+    "ocr_editor": MessageLookupByLibrary.simpleMessage("Trình chỉnh sửa OCR"),
+    "ocr_editor_empty_hint": MessageLookupByLibrary.simpleMessage(
+      "Chạm vào vùng bbox trên preview để chỉnh sửa text hoặc hình ảnh.",
+    ),
+    "ocr_embedded_image": MessageLookupByLibrary.simpleMessage("Ảnh nhúng"),
+    "ocr_export_pdf_processing": MessageLookupByLibrary.simpleMessage(
+      "Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.",
+    ),
+    "ocr_export_searchable_pdf": MessageLookupByLibrary.simpleMessage(
+      "Xuất searchable PDF",
+    ),
+    "ocr_export_txt": MessageLookupByLibrary.simpleMessage("Xuất .txt"),
+    "ocr_export_txt_success": MessageLookupByLibrary.simpleMessage(
+      "Đã xuất file .txt",
+    ),
+    "ocr_figure": MessageLookupByLibrary.simpleMessage("Hình minh họa"),
+    "ocr_hide_document_background": MessageLookupByLibrary.simpleMessage(
+      "Ẩn nền tài liệu",
+    ),
+    "ocr_insert": MessageLookupByLibrary.simpleMessage("Insert"),
+    "ocr_italic": MessageLookupByLibrary.simpleMessage("Nghiêng"),
+    "ocr_line_empty_hint": MessageLookupByLibrary.simpleMessage(
+      "Chưa có nội dung — OCR không nhận dạng được, hãy nhập tay bên dưới.",
+    ),
+    "ocr_line_header": MessageLookupByLibrary.simpleMessage("Dòng văn bản"),
+    "ocr_load_error": MessageLookupByLibrary.simpleMessage("Lỗi tải dữ liệu"),
+    "ocr_lowercase": MessageLookupByLibrary.simpleMessage("viết thường"),
+    "ocr_more_actions": MessageLookupByLibrary.simpleMessage("Thêm thao tác"),
+    "ocr_move_down": MessageLookupByLibrary.simpleMessage("Đưa xuống"),
+    "ocr_move_up": MessageLookupByLibrary.simpleMessage("Đưa lên"),
+    "ocr_next_missing_line": MessageLookupByLibrary.simpleMessage(
+      "Dòng thiếu kế",
+    ),
+    "ocr_no_source_file": MessageLookupByLibrary.simpleMessage(
+      "Không có file gốc để preview.",
+    ),
+    "ocr_normalize_page_preset": MessageLookupByLibrary.simpleMessage(
+      "Chuẩn hóa preset trang hiện tại",
+    ),
+    "ocr_normalize_page_success": MessageLookupByLibrary.simpleMessage(
+      "Đã chuẩn hóa preset cho trang hiện tại.",
+    ),
+    "ocr_page_label": m2,
+    "ocr_pdf_render_failed": MessageLookupByLibrary.simpleMessage(
+      "Không render được trang PDF.",
+    ),
+    "ocr_preset_body": MessageLookupByLibrary.simpleMessage("Body"),
+    "ocr_preset_caption": MessageLookupByLibrary.simpleMessage("Caption"),
+    "ocr_preset_h1": MessageLookupByLibrary.simpleMessage("H1"),
+    "ocr_preset_h2": MessageLookupByLibrary.simpleMessage("H2"),
+    "ocr_preset_h3": MessageLookupByLibrary.simpleMessage("H3"),
+    "ocr_prev_missing_line": MessageLookupByLibrary.simpleMessage(
+      "Dòng thiếu trước",
+    ),
+    "ocr_preview_after_edit": MessageLookupByLibrary.simpleMessage(
+      "Preview sau chỉnh sửa",
+    ),
+    "ocr_preview_edited": MessageLookupByLibrary.simpleMessage(
+      "Preview dữ liệu đã sửa",
+    ),
+    "ocr_redo": MessageLookupByLibrary.simpleMessage("Làm lại"),
+    "ocr_redraw": MessageLookupByLibrary.simpleMessage("Vẽ lại"),
+    "ocr_requeue": MessageLookupByLibrary.simpleMessage(
+      "Xử lý lại (cập nhật ảnh trang, bbox)",
+    ),
+    "ocr_requeue_success": MessageLookupByLibrary.simpleMessage(
+      "Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.",
+    ),
+    "ocr_save_edits": MessageLookupByLibrary.simpleMessage("Lưu chỉnh sửa"),
+    "ocr_save_success": MessageLookupByLibrary.simpleMessage(
+      "Đã lưu chỉnh sửa OCR.",
+    ),
+    "ocr_show_document_background": MessageLookupByLibrary.simpleMessage(
+      "Hiện nền tài liệu",
+    ),
+    "ocr_style_tooltip": MessageLookupByLibrary.simpleMessage(
+      "Định dạng đang lưu vào style model",
+    ),
+    "ocr_table": MessageLookupByLibrary.simpleMessage("Bảng"),
+    "ocr_table_html": MessageLookupByLibrary.simpleMessage("HTML bảng"),
+    "ocr_underline": MessageLookupByLibrary.simpleMessage("Gạch chân"),
+    "ocr_unsaved": MessageLookupByLibrary.simpleMessage("Chưa lưu"),
+    "ocr_uppercase": MessageLookupByLibrary.simpleMessage("VIẾT HOA"),
+    "ocr_zoom_in": MessageLookupByLibrary.simpleMessage("Phóng to"),
+    "ocr_zoom_out": MessageLookupByLibrary.simpleMessage("Thu nhỏ"),
+    "ocr_zoom_reset": MessageLookupByLibrary.simpleMessage("Về kích thước gốc"),
     "openSettings": MessageLookupByLibrary.simpleMessage("Mở cài đặt"),
     "optional": MessageLookupByLibrary.simpleMessage("Tùy chọn"),
     "or_use_select_file_to_browse_directory_without_permission":
@@ -941,7 +1062,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pdf_note_hint": MessageLookupByLibrary.simpleMessage("Nhập ghi chú"),
     "pdf_notes_list": MessageLookupByLibrary.simpleMessage("Danh sách ghi chú"),
     "pdf_page_number": MessageLookupByLibrary.simpleMessage("Số trang"),
-    "pdf_page_of": m1,
+    "pdf_page_of": m3,
     "pdf_path_label": MessageLookupByLibrary.simpleMessage("Đường dẫn:"),
     "pdf_please_wait": MessageLookupByLibrary.simpleMessage("Vui lòng đợi"),
     "pdf_read_ebook": MessageLookupByLibrary.simpleMessage("Đọc ebook"),
@@ -960,14 +1081,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "pdf_search_tooltip": MessageLookupByLibrary.simpleMessage("Tìm"),
     "pdf_share": MessageLookupByLibrary.simpleMessage("Chia sẻ"),
-    "pdf_share_error": m2,
+    "pdf_share_error": m4,
     "pdf_share_file_not_found": MessageLookupByLibrary.simpleMessage(
       "Không tìm thấy file để chia sẻ",
     ),
     "pdf_share_success": MessageLookupByLibrary.simpleMessage(
       "Đã chia sẻ thành công",
     ),
-    "pdf_share_text": m3,
+    "pdf_share_text": m5,
     "pdf_share_wait_download": MessageLookupByLibrary.simpleMessage(
       "Đang tải PDF, vui lòng đợi và thử lại",
     ),
@@ -976,7 +1097,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "pdf_text_select_on": MessageLookupByLibrary.simpleMessage("Chọn chữ: Bật"),
     "pdf_toolbar": MessageLookupByLibrary.simpleMessage("Thanh công cụ"),
-    "pdf_tts_read_error": m4,
+    "pdf_tts_read_error": m6,
     "pdf_undo": MessageLookupByLibrary.simpleMessage("Hoàn tác"),
     "pdf_view_file_info": MessageLookupByLibrary.simpleMessage(
       "Xem thông tin file",
@@ -1469,11 +1590,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "tools_document_scanner_description": MessageLookupByLibrary.simpleMessage(
       "Quét tài liệu bằng camera",
     ),
-    "tools_file_saved_to": m5,
+    "tools_file_saved_to": m7,
     "tools_no_file_selected": MessageLookupByLibrary.simpleMessage(
       "Chưa chọn file",
     ),
-    "tools_pages_count": m6,
+    "tools_pages_count": m8,
     "tools_preview": MessageLookupByLibrary.simpleMessage("Xem trước"),
     "tools_processing": MessageLookupByLibrary.simpleMessage("Đang xử lý..."),
     "tools_remove_page": MessageLookupByLibrary.simpleMessage("Xóa trang"),
@@ -1509,7 +1630,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Tổng Tương Tác",
     ),
     "total_pages": MessageLookupByLibrary.simpleMessage("Số trang"),
-    "total_ratings": m7,
+    "total_ratings": m9,
     "transactionId": MessageLookupByLibrary.simpleMessage("Mã giao dịch"),
     "transaction_id": MessageLookupByLibrary.simpleMessage("Mã giao dịch"),
     "translate": MessageLookupByLibrary.simpleMessage("Ngôn ngữ dịch"),

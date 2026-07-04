@@ -1,14 +1,19 @@
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/domain/data/models/models.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
 import 'package:readbox/services/ocr_page_render_service.dart';
-import 'package:readbox/ui/widget/app_widgets/ocr_bbox_overlay.dart';
+import 'package:readbox/ui/widget/app_widgets/ocr_page_canvas.dart';
+import 'package:readbox/ui/widget/app_widgets/ocr_page_nav_controls.dart';
+import 'package:readbox/ui/widget/app_widgets/ocr_preview_zoom_controls.dart';
+import 'package:readbox/utils/ocr_add_line_geometry.dart';
 
-/// Preview trang tài liệu + overlay bbox có thể click + cơ chế thu phóng
-/// (pinch + nút zoom in/out/reset).
+/// Preview trang tài liệu + overlay bbox + zoom/pagination.
+///
+/// Chế độ "thêm dòng" (vẽ khung) do parent điều khiển qua [addMode] /
+/// [onPendingRectChanged]; các nút thao tác nằm ở [OcrEditorOperationBar].
 class OcrPagePreview extends StatefulWidget {
   final OcrJobModel job;
   final OcrPageModel page;
@@ -21,10 +26,17 @@ class OcrPagePreview extends StatefulWidget {
   final bool canPrev;
   final bool canNext;
 
-  /// Gọi khi người dùng vẽ xong một khung mới (chế độ "thêm dòng thủ công")
-  /// — dùng cho vùng text mà OCR bỏ sót/không nhận dạng được. [rect] theo hệ
-  /// toạ độ pixel gốc của trang (page.width x page.height).
-  final ValueChanged<Rect>? onAddLine;
+  /// Chế độ vẽ khung mới — bật/tắt từ vùng thao tác phía dưới.
+  final bool addMode;
+
+  /// Gọi khi người dùng kéo xong một khung hợp lệ (chờ xác nhận Insert).
+  final ValueChanged<Rect?>? onPendingRectChanged;
+
+  /// Khung đã vẽ, chờ xác nhận — hiển thị trên canvas cho đến Insert / Vẽ lại.
+  final Rect? pendingRect;
+
+  /// Cập nhật bbox dòng sau khi kéo/chỉnh trên preview.
+  final void Function(int index, Rect rect)? onLineBboxChanged;
 
   const OcrPagePreview({
     super.key,
@@ -38,7 +50,10 @@ class OcrPagePreview extends StatefulWidget {
     this.onNextPage,
     this.canPrev = false,
     this.canNext = false,
-    this.onAddLine,
+    this.addMode = false,
+    this.onPendingRectChanged,
+    this.pendingRect,
+    this.onLineBboxChanged,
   });
 
   @override
@@ -54,14 +69,29 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
   Uint8List? _pdfBytes;
   bool _loading = false;
   Size _viewportSize = Size.zero;
+  bool _showDocumentBackground = true;
 
-  bool _addMode = false;
   Offset? _drawStart;
   Rect? _drawRect;
-  Rect? _pendingInsertRect;
+  Rect? _editingLineRect;
+  int? _editingLineIndex;
 
-  /// Ảnh raster đầy đủ do worker upload (đúng pixel space bbox) — ưu tiên
-  /// hiển thị ảnh này thay vì tự render lại PDF trên client.
+  bool get _pendingDraggable =>
+      widget.pendingRect != null && _drawRect == null;
+
+  bool get _isEditingLineBbox => _editingLineRect != null;
+
+  Rect? get _selectedLineRect {
+    if (widget.addMode) return null;
+    final sel = widget.selection;
+    if (sel?.kind != OcrEditorSelectionKind.line) return null;
+    if (sel!.index < 0 || sel.index >= widget.page.lines.length) return null;
+    return OcrAddLineGeometry.bboxRect(widget.page.lines[sel.index].bbox);
+  }
+
+  Rect? get _displaySelectedLineRect =>
+      _editingLineRect ?? _selectedLineRect;
+
   String? get _pageImageUrl => widget.page.pageImageUrl;
 
   @override
@@ -78,6 +108,30 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
       _resetZoom();
       _loadPreview();
     }
+    if (!widget.addMode && oldWidget.addMode) {
+      _drawStart = null;
+      _drawRect = null;
+    }
+    if (widget.selection != oldWidget.selection ||
+        widget.page.page != oldWidget.page.page) {
+      _clearLineEditState();
+    } else if (_editingLineIndex != null) {
+      final idx = _editingLineIndex!;
+      if (idx >= widget.page.lines.length) {
+        _clearLineEditState();
+      } else {
+        final pageRect =
+            OcrAddLineGeometry.bboxRect(widget.page.lines[idx].bbox);
+        if (_editingLineRect == null && pageRect != _selectedLineRect) {
+          _clearLineEditState();
+        }
+      }
+    }
+  }
+
+  void _clearLineEditState() {
+    _editingLineRect = null;
+    _editingLineIndex = null;
   }
 
   @override
@@ -87,8 +141,6 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
   }
 
   Future<void> _loadPreview() async {
-    // Đã có ảnh trang sẵn từ worker (chính xác pixel-space với bbox) — không
-    // cần tự tải + render lại PDF nữa.
     if (_pageImageUrl != null && _pageImageUrl!.isNotEmpty) {
       setState(() {
         _pdfBytes = null;
@@ -131,54 +183,6 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
     _transformCtrl.value = Matrix4.identity();
   }
 
-  void _toggleAddMode() {
-    setState(() {
-      _addMode = !_addMode;
-      _drawStart = null;
-      _drawRect = null;
-      _pendingInsertRect = null;
-    });
-  }
-
-  void _onDrawStart(DragStartDetails details) {
-    setState(() {
-      _drawStart = details.localPosition;
-      _drawRect = null;
-    });
-  }
-
-  void _onDrawUpdate(DragUpdateDetails details) {
-    final start = _drawStart;
-    if (start == null) return;
-    setState(() => _drawRect = Rect.fromPoints(start, details.localPosition));
-  }
-
-  void _onDrawEnd(DragEndDetails details) {
-    final rect = _drawRect;
-    setState(() {
-      _drawStart = null;
-      _drawRect = null;
-    });
-    // Bỏ qua thao tác chạm nhầm (kéo quá nhỏ).
-    if (rect != null && rect.width > 12 && rect.height > 8) {
-      setState(() => _pendingInsertRect = rect);
-    }
-  }
-
-  void _confirmInsertRect() {
-    final rect = _pendingInsertRect;
-    if (rect == null) return;
-    widget.onAddLine?.call(rect);
-    setState(() {
-      _pendingInsertRect = null;
-      _addMode = false;
-    });
-  }
-
-  void _clearPendingRect() {
-    setState(() => _pendingInsertRect = null);
-  }
-
   void _zoomBy(double factor) {
     final currentScale = _transformCtrl.value.getMaxScaleOnAxis();
     final targetScale = (currentScale * factor).clamp(_minScale, _maxScale);
@@ -192,9 +196,94 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
     _transformCtrl.value = updated;
   }
 
+  void _onDrawStart(DragStartDetails details) {
+    widget.onPendingRectChanged?.call(null);
+    setState(() {
+      _drawStart = details.localPosition;
+      _drawRect = null;
+    });
+  }
+
+  void _onDrawUpdate(DragUpdateDetails details) {
+    final start = _drawStart;
+    if (start == null) return;
+    setState(() {
+      _drawRect = OcrAddLineGeometry.buildFromDrag(
+        start: start,
+        end: details.localPosition,
+        page: widget.page,
+      );
+    });
+  }
+
+  void _onDrawEnd(DragEndDetails details) {
+    final rect = _drawRect;
+    setState(() {
+      _drawStart = null;
+      _drawRect = null;
+    });
+    if (rect != null && OcrAddLineGeometry.isValidPlacement(rect)) {
+      widget.onPendingRectChanged?.call(rect);
+    }
+  }
+
+  void _onPendingMove(Offset delta) {
+    final current = widget.pendingRect;
+    if (current == null) return;
+    widget.onPendingRectChanged?.call(
+      OcrAddLineGeometry.move(current, delta, widget.page),
+    );
+  }
+
+  void _onPendingResize(OcrPendingRectEdge edge, Offset delta) {
+    final current = widget.pendingRect;
+    if (current == null) return;
+    widget.onPendingRectChanged?.call(
+      OcrAddLineGeometry.resizeWidth(current, edge, delta, widget.page),
+    );
+  }
+
+  void _onSelectedLineMove(Offset delta) {
+    final sel = widget.selection;
+    if (sel?.kind != OcrEditorSelectionKind.line) return;
+
+    final base = _editingLineRect ?? _selectedLineRect;
+    if (base == null || base.isEmpty) return;
+
+    setState(() {
+      _editingLineIndex = sel!.index;
+      _editingLineRect = OcrAddLineGeometry.move(base, delta, widget.page);
+    });
+  }
+
+  void _onSelectedLineResize(OcrPendingRectEdge edge, Offset delta) {
+    final sel = widget.selection;
+    if (sel?.kind != OcrEditorSelectionKind.line) return;
+
+    final base = _editingLineRect ?? _selectedLineRect;
+    if (base == null || base.isEmpty) return;
+
+    setState(() {
+      _editingLineIndex = sel!.index;
+      _editingLineRect =
+          OcrAddLineGeometry.resizeWidth(base, edge, delta, widget.page);
+    });
+  }
+
+  void _commitSelectedLineEdit() {
+    final index = _editingLineIndex;
+    final rect = _editingLineRect;
+    if (index == null || rect == null) return;
+
+    widget.onLineBboxChanged?.call(index, rect);
+    _clearLineEditState();
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Column(
       children: [
@@ -221,304 +310,97 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
                               transformationController: _transformCtrl,
                               minScale: _minScale,
                               maxScale: _maxScale,
-                              // Tắt pan của InteractiveViewer khi đang vẽ khung
-                              // mới để gesture kéo được GestureDetector bên
-                              // trong xử lý thay vì bị dùng để cuộn ảnh.
-                              panEnabled: !_addMode,
+                              panEnabled: !widget.addMode && !_isEditingLineBbox,
                               child: Center(
-                                child: _buildPageContent(constraints.biggest),
+                                child: OcrPageCanvas(
+                                  job: widget.job,
+                                  page: widget.page,
+                                  selection: widget.selection,
+                                  isPdf: _renderService.isPdf(
+                                    widget.job.mimeType,
+                                    widget.job.fileUrl,
+                                  ),
+                                  pdfBytes: _pdfBytes,
+                                  showDocumentBackground:
+                                      _showDocumentBackground,
+                                  onLineTap: widget.onLineTap,
+                                  onImageTap: widget.onImageTap,
+                                  onTableTap: widget.onTableTap,
+                                  addMode: widget.addMode,
+                                  drawRect: _drawRect ?? widget.pendingRect,
+                                  pendingDraggable: _pendingDraggable,
+                                  onDrawStart: _onDrawStart,
+                                  onDrawUpdate: _onDrawUpdate,
+                                  onDrawEnd: _onDrawEnd,
+                                  onPendingMove: _onPendingMove,
+                                  onPendingResize: _onPendingResize,
+                                  selectedLineRect: _displaySelectedLineRect,
+                                  onSelectedLineMove: _onSelectedLineMove,
+                                  onSelectedLineResize: _onSelectedLineResize,
+                                  onSelectedLineEditEnd: _commitSelectedLineEdit,
+                                ),
                               ),
                             );
                           },
                         ),
-                  if (_addMode)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      right: 8,
-                      child: _buildAddModeHint(colorScheme),
-                    ),
-                  if (_addMode && _pendingInsertRect != null)
-                    Positioned(
-                      left: 8,
-                      right: 8,
-                      bottom: 62,
-                      child: _buildInsertActions(colorScheme),
-                    ),
-                  Positioned(
-                    left: 8,
-                    bottom: 8,
-                    child: _buildAddModeToggle(colorScheme),
-                  ),
-                  Positioned(
-                    right: 8,
-                    bottom: 8,
-                    child: _buildZoomControls(colorScheme),
-                  ),
                 ],
               ),
             ),
           ),
         ),
-        _buildPageControls(colorScheme),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 8, 4),
+          child: SizedBox(
+            height: 40,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Center(
+                    child: OcrPageNavControls(
+                      pageNumber: widget.page.page,
+                      canPrev: widget.canPrev,
+                      canNext: widget.canNext,
+                      onPrevPage: widget.onPrevPage,
+                      onNextPage: widget.onNextPage,
+                    ),
+                  ),
+                ),
+                VerticalDivider(
+                  width: 8,
+                  thickness: 1,
+                  indent: 4,
+                  endIndent: 4,
+                  color: colorScheme.outline.withValues(alpha: 0.2),
+                ),
+                IconButton(
+                  tooltip: _showDocumentBackground
+                      ? l.ocr_hide_document_background
+                      : l.ocr_show_document_background,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    _showDocumentBackground
+                        ? Icons.layers_clear_outlined
+                        : Icons.layers_outlined,
+                    size: 14,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showDocumentBackground = !_showDocumentBackground;
+                    });
+                  },
+                ),
+                OcrPreviewZoomControls(
+                  onZoomOut: () => _zoomBy(1 / 1.3),
+                  onResetZoom: _resetZoom,
+                  onZoomIn: () => _zoomBy(1.3),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
-
-  Widget _buildAddModeHint(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _pendingInsertRect == null
-            ? 'Kéo trên vùng OCR bỏ sót để vẽ khung. Sau đó bấm Insert để chèn đúng box.'
-            : 'Đã chọn vùng thiếu OCR. Bấm Insert để chèn dòng mới vào đúng khung.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 12,
-          color: colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddModeToggle(ColorScheme colorScheme) {
-    return Material(
-      color: _addMode ? colorScheme.primary : colorScheme.surface,
-      borderRadius: BorderRadius.circular(24),
-      elevation: 2,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: widget.onAddLine == null ? null : _toggleAddMode,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.add_box_outlined,
-                size: 18,
-                color: _addMode ? colorScheme.onPrimary : colorScheme.primary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Thêm dòng',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _addMode
-                      ? colorScheme.onPrimary
-                      : colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInsertActions(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _clearPendingRect,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Vẽ lại'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: _confirmInsertRect,
-              icon: const Icon(Icons.add_task, size: 16),
-              label: const Text('Insert'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildZoomControls(ColorScheme colorScheme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 6,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: 'Thu nhỏ',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.remove, size: 18),
-            onPressed: () => _zoomBy(1 / 1.3),
-          ),
-          IconButton(
-            tooltip: 'Về kích thước gốc',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.crop_free, size: 18),
-            onPressed: _resetZoom,
-          ),
-          IconButton(
-            tooltip: 'Phóng to',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.add, size: 18),
-            onPressed: () => _zoomBy(1.3),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageContent(Size maxSize) {
-    final networkImageUrl = _pageImageUrl;
-    final url = widget.job.fileUrl;
-    Widget imageWidget;
-
-    if (networkImageUrl != null && networkImageUrl.isNotEmpty) {
-      imageWidget = CachedNetworkImage(
-        imageUrl: networkImageUrl,
-        fit: BoxFit.fill,
-        placeholder: (_, __) =>
-            const Center(child: CircularProgressIndicator()),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image_outlined),
-      );
-    } else if (url == null) {
-      return const Text('Không có file gốc để preview.');
-    } else if (_renderService.isPdf(widget.job.mimeType, url)) {
-      if (_pdfBytes == null) {
-        return const Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Không render được trang PDF.'),
-        );
-      }
-      // fill: ảnh đã được render đúng page.width x page.height (khớp không
-      // gian pixel mà worker OCR dùng để tính bbox) nên không cần letterbox.
-      imageWidget = Image.memory(_pdfBytes!, fit: BoxFit.fill);
-    } else {
-      imageWidget = CachedNetworkImage(
-        imageUrl: url,
-        fit: BoxFit.fill,
-        placeholder: (_, __) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image_outlined),
-      );
-    }
-
-    // Dựng ảnh + overlay trong ĐÚNG hệ toạ độ pixel gốc của OCR
-    // (page.width x page.height, scale 1:1 — bbox không cần quy đổi), rồi để
-    // FittedBox co toàn khối xuống vừa khung nhìn bằng MỘT phép biến đổi
-    // đồng nhất. Ảnh và bbox cùng chịu một transform nên không thể lệch nhau,
-    // kể cả khi viewport ép chiều cao (nguyên nhân lệch dồn trước đây).
-    final pageW = widget.page.width > 0 ? widget.page.width.toDouble() : 1000.0;
-    final pageH =
-        widget.page.height > 0 ? widget.page.height.toDouble() : 1400.0;
-
-    return FittedBox(
-      fit: BoxFit.contain,
-      child: SizedBox(
-        width: pageW,
-        height: pageH,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            imageWidget,
-            OcrBboxOverlay(
-              page: widget.page,
-              displaySize: Size(pageW, pageH),
-              selection: widget.selection,
-              onLineTap: widget.onLineTap,
-              onImageTap: widget.onImageTap,
-              onTableTap: widget.onTableTap,
-            ),
-            if (_addMode)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanStart: _onDrawStart,
-                onPanUpdate: _onDrawUpdate,
-                onPanEnd: _onDrawEnd,
-                child: CustomPaint(
-                  painter: _DrawRectPainter(rect: _drawRect),
-                  size: Size(pageW, pageH),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPageControls(ColorScheme colorScheme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: widget.canPrev ? widget.onPrevPage : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Text(
-            'Trang ${widget.page.page}',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          IconButton(
-            onPressed: widget.canNext ? widget.onNextPage : null,
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Vẽ khung xem trước khi người dùng đang kéo để tạo dòng text thủ công.
-class _DrawRectPainter extends CustomPainter {
-  final Rect? rect;
-
-  const _DrawRectPainter({required this.rect});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = rect;
-    if (r == null) return;
-    final fillPaint = Paint()
-      ..color = Colors.amber.withValues(alpha: 0.18)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(r, fillPaint);
-    final borderPaint = Paint()
-      ..color = Colors.amber.shade800
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width / 250;
-    canvas.drawRect(r, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DrawRectPainter oldDelegate) =>
-      oldDelegate.rect != rect;
 }

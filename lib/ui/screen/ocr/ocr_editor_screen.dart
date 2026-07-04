@@ -5,13 +5,13 @@ import 'package:readbox/blocs/ocr/ocr_editor_cubit.dart';
 import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/domain/repositories/ocr_repository.dart';
+import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
 import 'package:readbox/injection_container.dart';
 import 'package:readbox/res/res.dart';
 import 'package:readbox/ui/widget/widget.dart';
 
-/// Màn chỉnh sửa kết quả OCR: rail thumbnail hẹp bám trái (cuộn theo trang),
-/// bên phải là khu vực thao tác gồm preview (bbox click được) + panel chỉnh
-/// sửa text/hình/bảng.
+/// Màn chỉnh sửa kết quả OCR: phía trên thumbnail + preview; phía dưới panel
+/// chỉnh sửa kèm cột action dọc bên phải (undo/redo/lưu/menu).
 class OcrEditorScreen extends StatelessWidget {
   final String jobId;
   final String? title;
@@ -27,10 +27,65 @@ class OcrEditorScreen extends StatelessWidget {
   }
 }
 
-class _OcrEditorBody extends StatelessWidget {
+class _OcrEditorBody extends StatefulWidget {
   final String? title;
 
   const _OcrEditorBody({this.title});
+
+  @override
+  State<_OcrEditorBody> createState() => _OcrEditorBodyState();
+}
+
+class _OcrEditorBodyState extends State<_OcrEditorBody> {
+  bool _addMode = false;
+  Rect? _pendingInsertRect;
+
+  void _toggleAddMode() {
+    // final entering = !_addMode;
+    setState(() {
+      _addMode = !_addMode;
+      _pendingInsertRect = null;
+    });
+    // if (entering) {
+    //   AppSnackBar.show(
+    //     context,
+    //     message: AppLocalizations.of(context).ocr_add_line_draw_hint,
+    //     snackBarType: SnackBarType.info,
+    //   );
+    // }
+  }
+
+  void _onPendingRectChanged(Rect? rect) {
+    setState(() => _pendingInsertRect = rect);
+    // if (rect != null) {
+    //   AppSnackBar.show(
+    //     context,
+    //     message: AppLocalizations.of(context).ocr_add_line_selected_hint,
+    //     snackBarType: SnackBarType.info,
+    //   );
+    // }
+  }
+
+  void _onRedrawPendingRect() {
+    setState(() => _pendingInsertRect = null);
+    // if (_addMode) {
+    //   AppSnackBar.show(
+    //     context,
+    //     message: AppLocalizations.of(context).ocr_add_line_draw_hint,
+    //     snackBarType: SnackBarType.info,
+    //   );
+    // }
+  }
+
+  void _confirmInsert() {
+    final rect = _pendingInsertRect;
+    if (rect == null) return;
+    context.read<OcrEditorCubit>().addLine(rect);
+    setState(() {
+      _pendingInsertRect = null;
+      _addMode = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,142 +93,18 @@ class _OcrEditorBody extends StatelessWidget {
 
     return BaseScreen<OcrEditorCubit>(
       colorBg: colorScheme.surface,
-      title: title ?? 'Chỉnh sửa OCR',
+      title: widget.title ?? AppLocalizations.current.ocr_editor,
       showGlobalFloatingActions: false,
-      rightWidgets: [
-        BlocBuilder<OcrEditorCubit, BaseState>(
-          builder: (context, state) {
-            final data = state is LoadedState<OcrEditorLoaded>
-                ? state.data
-                : null;
-            if (data == null) return const SizedBox.shrink();
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: 'Hoàn tác',
-                  onPressed: context.read<OcrEditorCubit>().canUndo
-                      ? () => context.read<OcrEditorCubit>().undo()
-                      : null,
-                  icon: const Icon(Icons.undo),
-                ),
-                IconButton(
-                  tooltip: 'Làm lại',
-                  onPressed: context.read<OcrEditorCubit>().canRedo
-                      ? () => context.read<OcrEditorCubit>().redo()
-                      : null,
-                  icon: const Icon(Icons.redo),
-                ),
-                IconButton(
-                  tooltip: 'Lưu chỉnh sửa',
-                  onPressed: (data.isDirty && !data.isSaving)
-                      ? () => _onSave(context)
-                      : null,
-                  icon: data.isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                ),
-                if (data.isDirty)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Chip(
-                      label: const Text('Chưa lưu'),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: colorScheme.tertiaryContainer,
-                    ),
-                  ),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'requeue') {
-                      _onRequeue(context);
-                    } else if (v == 'normalize_page') {
-                      context.read<OcrEditorCubit>().normalizeCurrentPageStyles();
-                      AppSnackBar.show(
-                        context,
-                        message: 'Đã chuẩn hóa preset cho trang hiện tại.',
-                        snackBarType: SnackBarType.success,
-                      );
-                    } else if (v == 'body_page') {
-                      context
-                          .read<OcrEditorCubit>()
-                          .applyPresetToCurrentPage(OcrTextPreset.body);
-                      AppSnackBar.show(
-                        context,
-                        message: 'Đã áp Body cho toàn bộ dòng của trang hiện tại.',
-                        snackBarType: SnackBarType.success,
-                      );
-                    } else if (v == 'preview_edited') {
-                      _showEditedPreview(context, data);
-                    } else {
-                      _onExport(context, v);
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'preview_edited',
-                      child: Text('Preview dữ liệu đã sửa'),
-                    ),
-                    PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'normalize_page',
-                      child: Text('Chuẩn hóa preset trang hiện tại'),
-                    ),
-                    PopupMenuItem(
-                      value: 'body_page',
-                      child: Text('Áp Body cho toàn trang'),
-                    ),
-                    PopupMenuDivider(),
-                    PopupMenuItem(value: 'txt', child: Text('Xuất .txt')),
-                    PopupMenuItem(
-                      value: 'pdf',
-                      child: Text('Xuất searchable PDF'),
-                    ),
-                    PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'requeue',
-                      child: Text('Xử lý lại (cập nhật ảnh trang, bbox)'),
-                    ),
-                  ],
-                  icon: data.isExporting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.download_outlined),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
+      useSafeAreaBottom: true,
+      autoHandleState: true,
       body: BlocBuilder<OcrEditorCubit, BaseState>(
         builder: (context, state) {
-          if (state is LoadingState) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ErrorState) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  state.message ?? 'Lỗi tải dữ liệu',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
           if (state is! LoadedState<OcrEditorLoaded>) {
             return const SizedBox.shrink();
           }
           final data = state.data;
           return LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 720;
               final thumbnailRail = OcrPageThumbnailRail(
                 job: data.job,
                 pages: data.pages,
@@ -185,9 +116,15 @@ class _OcrEditorBody extends StatelessWidget {
                 job: data.job,
                 page: data.currentPage,
                 selection: data.selection,
+                addMode: _addMode,
+                pendingRect: _pendingInsertRect,
+                onPendingRectChanged: _onPendingRectChanged,
                 onLineTap: context.read<OcrEditorCubit>().selectLine,
                 onImageTap: context.read<OcrEditorCubit>().selectImage,
                 onTableTap: context.read<OcrEditorCubit>().selectTable,
+                onLineBboxChanged: (index, rect) => context
+                    .read<OcrEditorCubit>()
+                    .updateLineBbox(index, rect),
                 canPrev: data.currentPageIndex > 0,
                 canNext: data.currentPageIndex < data.pages.length - 1,
                 onPrevPage: () => context
@@ -196,8 +133,6 @@ class _OcrEditorBody extends StatelessWidget {
                 onNextPage: () => context
                     .read<OcrEditorCubit>()
                     .goToPage(data.currentPageIndex + 1),
-                onAddLine: (rect) =>
-                    context.read<OcrEditorCubit>().addLine(rect),
               );
               final editor = OcrEditorPanel(
                 page: data.currentPage,
@@ -242,51 +177,107 @@ class _OcrEditorBody extends StatelessWidget {
                         .replaceImageAsset(sel!.index, path);
                   }
                 },
-                onDeleteLine: () =>
-                    context.read<OcrEditorCubit>().deleteSelectedLine(),
-                onAddLine: () => context.read<OcrEditorCubit>().addLine(),
-                onNextMissingLine: () =>
-                    context.read<OcrEditorCubit>().selectNextMissingLine(),
-                onPrevMissingLine: () =>
-                    context.read<OcrEditorCubit>().selectPrevMissingLine(),
-                onMoveLineUp: () =>
-                    context.read<OcrEditorCubit>().moveSelectedLineUp(),
-                onMoveLineDown: () =>
-                    context.read<OcrEditorCubit>().moveSelectedLineDown(),
                 onDeleteImage: () =>
                     context.read<OcrEditorCubit>().deleteSelectedImage(),
                 onDeleteTable: () =>
                     context.read<OcrEditorCubit>().deleteSelectedTable(),
               );
 
-              // Khu vực thao tác: preview lớn (bbox click được) + panel chỉnh
-              // sửa. Trên màn hẹp xếp dọc, màn rộng xếp ngang.
-              final workArea = wide
-                  ? Row(
-                      children: [
-                        Expanded(flex: 11, child: preview),
-                        Expanded(flex: 9, child: editor),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        Expanded(flex: 11, child: preview),
-                        Expanded(flex: 9, child: editor),
-                      ],
-                    );
+              final cubit = context.read<OcrEditorCubit>();
+              final operationBar = OcrEditorOperationBar(
+                addMode: _addMode,
+                hasPendingRect: _pendingInsertRect != null,
+                selection: data.selection,
+                onToggleAddMode: _toggleAddMode,
+                onRedraw: _onRedrawPendingRect,
+                onInsert: _confirmInsert,
+                onMoveLineUp: cubit.moveSelectedLineUp,
+                onMoveLineDown: cubit.moveSelectedLineDown,
+                canMoveLineUp: cubit.canMoveSelectedLineUp(),
+                canMoveLineDown: cubit.canMoveSelectedLineDown(),
+                onDeleteLine: cubit.deleteSelectedLine,
+              );
 
-              // Rail thumbnail luôn cố định, hẹp, cuộn dọc, bám bên trái.
-              return Row(
+              // Trên: thumbnail (trái) + preview PDF (phải).
+              // Dưới: panel chỉnh sửa — chia dọc theo tỷ lệ 2:1, có splitter.
+              final previewArea = ProportionalSplitView(
+                direction: Axis.horizontal,
+                flexes: const [1, 4],
+                minSizes: const [72, 200],
+                children: [thumbnailRail, preview],
+              );
+
+              final actionRail = OcrEditorActionRail(
+                canUndo: context.read<OcrEditorCubit>().canUndo,
+                canRedo: context.read<OcrEditorCubit>().canRedo,
+                isDirty: data.isDirty,
+                isSaving: data.isSaving,
+                isExporting: data.isExporting,
+                onUndo: () => context.read<OcrEditorCubit>().undo(),
+                onRedo: () => context.read<OcrEditorCubit>().redo(),
+                onSave: () => _onSave(context),
+                onMenuAction: (v) => _handleMenuAction(context, v, data),
+              );
+
+              // Dưới: editor + thanh thao tác + cột action bám phải.
+              final editorArea = Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  thumbnailRail,
-                  Expanded(child: workArea),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Expanded(child: editor),
+                        operationBar,
+                      ],
+                    ),
+                  ),
+                  actionRail,
                 ],
+              );
+
+              return ProportionalSplitView(
+                direction: Axis.vertical,
+                flexes: const [2, 1],
+                minSizes: const [240, 180],
+                children: [previewArea, editorArea],
               );
             },
           );
         },
       ),
     );
+  }
+
+  void _handleMenuAction(
+    BuildContext context,
+    String action,
+    OcrEditorLoaded data,
+  ) {
+    final l = AppLocalizations.current;
+    switch (action) {
+      case 'requeue':
+        _onRequeue(context);
+      case 'normalize_page':
+        context.read<OcrEditorCubit>().normalizeCurrentPageStyles();
+        AppSnackBar.show(
+          context,
+          message: l.ocr_normalize_page_success,
+          snackBarType: SnackBarType.success,
+        );
+      case 'body_page':
+        context
+            .read<OcrEditorCubit>()
+            .applyPresetToCurrentPage(OcrTextPreset.body);
+        AppSnackBar.show(
+          context,
+          message: l.ocr_apply_body_page_success,
+          snackBarType: SnackBarType.success,
+        );
+      case 'preview_edited':
+        _showEditedPreview(context, data);
+      default:
+        _onExport(context, action);
+    }
   }
 
   Future<void> _onRequeue(BuildContext context) async {
@@ -296,8 +287,7 @@ class _OcrEditorBody extends StatelessWidget {
       if (!context.mounted) return;
       AppSnackBar.show(
         context,
-        message:
-            'Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.',
+        message: AppLocalizations.current.ocr_requeue_success,
         snackBarType: SnackBarType.success,
       );
       Navigator.of(context).pop();
@@ -324,13 +314,13 @@ class _OcrEditorBody extends StatelessWidget {
       if (format == 'txt' && result?['url'] != null) {
         AppSnackBar.show(
           context,
-          message: 'Đã xuất file .txt',
+          message: AppLocalizations.current.ocr_export_txt_success,
           snackBarType: SnackBarType.success,
         );
       } else if (format == 'pdf') {
         AppSnackBar.show(
           context,
-          message: 'Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.',
+          message: AppLocalizations.current.ocr_export_pdf_processing,
         );
       }
     } catch (e) {
@@ -351,7 +341,7 @@ class _OcrEditorBody extends StatelessWidget {
       if (!context.mounted) return;
       AppSnackBar.show(
         context,
-        message: 'Đã lưu chỉnh sửa OCR.',
+        message: AppLocalizations.current.ocr_save_success,
         snackBarType: SnackBarType.success,
       );
     } catch (e) {
@@ -370,7 +360,7 @@ class _OcrEditorBody extends StatelessWidget {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Preview sau chỉnh sửa'),
+          title: Text(AppLocalizations.of(ctx).ocr_preview_after_edit),
           content: SizedBox(
             width: 560,
             child: ListView.separated(
@@ -383,7 +373,7 @@ class _OcrEditorBody extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Trang ${page.page}',
+                      AppLocalizations.of(ctx).ocr_page_label(page.page),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
@@ -404,7 +394,7 @@ class _OcrEditorBody extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Đóng'),
+              child: Text(AppLocalizations.of(ctx).close),
             ),
           ],
         );

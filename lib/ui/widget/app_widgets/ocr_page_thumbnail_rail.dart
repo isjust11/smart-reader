@@ -4,10 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/services/ocr_page_render_service.dart';
+import 'package:readbox/ui/widget/base_network_image.dart';
 
 /// Dải thumbnail các trang tài liệu — cột hẹp, cuộn dọc, cố định bên trái
 /// màn editor. Chạm vào 1 thumbnail để nhảy tới trang đó ở khu vực thao tác.
-/// Có cơ chế thu phóng (nút +/-) để phóng to/thu nhỏ kích thước thumbnail.
 class OcrPageThumbnailRail extends StatefulWidget {
   final OcrJobModel job;
   final List<OcrPageModel> pages;
@@ -93,17 +93,13 @@ class _OcrPageThumbnailRailState extends State<OcrPageThumbnailRail> {
       ),
       child: Column(
         children: [
-          _buildZoomToolbar(colorScheme),
           Expanded(
             child: GestureDetector(
               // Pinch để thu phóng thumbnail (bên cạnh 2 nút +/-).
               onScaleUpdate: (details) => _setZoom(_zoom * details.scale),
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 10,
-                ),
+                padding: const EdgeInsets.all(4),
                 itemCount: widget.pages.length,
                 itemBuilder: (context, index) =>
                     _buildItem(context, colorScheme, index),
@@ -115,39 +111,11 @@ class _OcrPageThumbnailRailState extends State<OcrPageThumbnailRail> {
     );
   }
 
-  Widget _buildZoomToolbar(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.15)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            tooltip: 'Thu nhỏ thumbnail',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.zoom_out, size: 18),
-            onPressed: _zoom > _minZoom ? () => _setZoom(_zoom - 0.2) : null,
-          ),
-          IconButton(
-            tooltip: 'Phóng to thumbnail',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.zoom_in, size: 18),
-            onPressed: _zoom < _maxZoom ? () => _setZoom(_zoom + 0.2) : null,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildItem(BuildContext context, ColorScheme colorScheme, int index) {
     final page = widget.pages[index];
     final selected = index == widget.currentIndex;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
         onTap: () => widget.onSelect(index),
@@ -161,10 +129,10 @@ class _OcrPageThumbnailRailState extends State<OcrPageThumbnailRail> {
                     : 0.72,
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
+                    // borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: selected
-                          ? colorScheme.primary
+                          ? colorScheme.primary.withValues(alpha: 0.5)
                           : colorScheme.outline.withValues(alpha: 0.3),
                       width: selected ? 2 : 1,
                     ),
@@ -174,17 +142,16 @@ class _OcrPageThumbnailRailState extends State<OcrPageThumbnailRail> {
                               color: colorScheme.primary.withValues(
                                 alpha: 0.35,
                               ),
-                              blurRadius: 6,
+                              blurRadius: 2,
                             ),
                           ]
                         : null,
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: _buildThumb(page),
+                  child: _buildThumb(page, colorScheme),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               '${page.page}',
               style: TextStyle(
@@ -201,42 +168,36 @@ class _OcrPageThumbnailRailState extends State<OcrPageThumbnailRail> {
     );
   }
 
-  Widget _buildThumb(OcrPageModel page) {
+  Widget _buildThumb(OcrPageModel page, ColorScheme colorScheme) {
     // Ưu tiên ảnh trang do worker upload sẵn (khớp chính xác bbox) — nhẹ
     // hơn nhiều so với tự tải + render lại cả file PDF gốc chỉ để lấy thumb.
     final pageImageUrl = page.pageImageUrl;
     if (pageImageUrl != null && pageImageUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: pageImageUrl,
+      return BaseNetworkImage(
+        url: pageImageUrl,
         fit: BoxFit.cover,
-        placeholder: (_, __) => const ColoredBox(color: Color(0xFFE4E4E4)),
-        errorWidget: (_, __, ___) =>
-            const Icon(Icons.broken_image_outlined, size: 18),
       );
     }
 
     final url = widget.job.fileUrl;
     if (url == null) {
-      return const ColoredBox(color: Color(0xFFE4E4E4));
+      return ColoredBox(color: colorScheme.surfaceContainerLow);
     }
     if (!_renderService.isPdf(widget.job.mimeType, url)) {
-      return CachedNetworkImage(
-        imageUrl: url,
+      return BaseNetworkImage(
+        url: url,
         fit: BoxFit.cover,
-        placeholder: (_, __) => const ColoredBox(color: Color(0xFFE4E4E4)),
-        errorWidget: (_, __, ___) =>
-            const Icon(Icons.broken_image_outlined, size: 18),
       );
     }
     return FutureBuilder<Uint8List?>(
       future: _thumbFuture(url, page.page),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const ColoredBox(color: Color(0xFFE4E4E4));
+          return ColoredBox(color: colorScheme.surfaceContainerLow);
         }
         final bytes = snapshot.data;
         if (bytes == null) {
-          return const Icon(Icons.insert_drive_file_outlined, size: 18);
+          return ColoredBox(color: colorScheme.surfaceContainerLow);
         }
         return Image.memory(bytes, fit: BoxFit.cover);
       },

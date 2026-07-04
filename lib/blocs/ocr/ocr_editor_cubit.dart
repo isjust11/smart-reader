@@ -5,6 +5,7 @@ import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/blocs/utils.dart';
 import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/domain/repositories/ocr_repository.dart';
+import 'package:readbox/utils/ocr_add_line_geometry.dart';
 
 /// Cubit quản lý chỉnh sửa kết quả OCR: load trang, chọn bbox, sửa text/ảnh.
 class OcrEditorCubit extends Cubit<BaseState> {
@@ -140,6 +141,24 @@ class OcrEditorCubit extends Cubit<BaseState> {
     );
   }
 
+  /// Cập nhật bbox của dòng đang chọn (kéo / chỉnh rộng trên preview).
+  void updateLineBbox(int index, Rect rect) {
+    final data = _loaded;
+    if (data == null) return;
+    final page = data.currentPage;
+    if (index < 0 || index >= page.lines.length) return;
+
+    final lines = List<OcrLineModel>.from(page.lines);
+    lines[index] = lines[index].copyWith(
+      bbox: OcrAddLineGeometry.rectToBbox(rect),
+    );
+    _updatePage(
+      data,
+      page.copyWith(lines: lines, text: lines.map((e) => e.text).join('\n')),
+      isDirty: true,
+    );
+  }
+
   void applyLinePreset(int index, OcrTextPreset preset) {
     final data = _loaded;
     if (data == null) return;
@@ -267,13 +286,13 @@ class OcrEditorCubit extends Cubit<BaseState> {
   }
 
   Rect _defaultNewLineRect(OcrPageModel page) {
-    final w = page.width > 0 ? page.width.toDouble() : 1000.0;
-    final h = page.height > 0 ? page.height.toDouble() : 1400.0;
-    final boxW = w * 0.6;
-    final boxH = h * 0.035;
+    final w = OcrAddLineGeometry.pageWidth(page);
+    final h = OcrAddLineGeometry.pageHeight(page);
+    final lineH = OcrAddLineGeometry.typicalLineHeight(page);
+    final boxW = OcrAddLineGeometry.typicalLineWidth(page);
     final left = (w - boxW) / 2;
-    final top = (h - boxH) / 2;
-    return Rect.fromLTWH(left, top, boxW, boxH);
+    final top = (h - lineH) / 2;
+    return Rect.fromLTWH(left, top, boxW, lineH);
   }
 
   void deleteSelectedLine() {
@@ -293,28 +312,90 @@ class OcrEditorCubit extends Cubit<BaseState> {
     );
   }
 
-  void moveSelectedLineUp() => _moveSelectedLine(-1);
-  void moveSelectedLineDown() => _moveSelectedLine(1);
+  void moveSelectedLineUp() => _moveSelectedBBox(-1);
+  void moveSelectedLineDown() => _moveSelectedBBox(1);
 
-  void _moveSelectedLine(int delta) {
+  bool canMoveSelectedLineUp() => _canMoveSelectedBBox(-1);
+  bool canMoveSelectedLineDown() => _canMoveSelectedBBox(1);
+
+  void _moveSelectedBBox(int delta) {
     final data = _loaded;
-    if (data == null || data.selection?.kind != OcrEditorSelectionKind.line) {
-      return;
-    }
-    final page = data.currentPage;
-    final index = data.selection!.index;
-    final target = index + delta;
-    if (target < 0 || target >= page.lines.length) return;
+    final sel = data?.selection;
+    if (data == null || sel == null) return;
 
-    final lines = List<OcrLineModel>.from(page.lines);
-    final item = lines.removeAt(index);
-    lines.insert(target, item);
-    _updatePage(
-      data,
-      page.copyWith(lines: lines, text: lines.map((e) => e.text).join('\n')),
-      isDirty: true,
-    );
-    selectLine(target);
+    final page = data.currentPage;
+    final step = OcrAddLineGeometry.typicalLineHeight(page);
+    final offset = Offset(0, delta * step);
+
+    switch (sel.kind) {
+      case OcrEditorSelectionKind.line:
+        if (sel.index < 0 || sel.index >= page.lines.length) return;
+        final lines = List<OcrLineModel>.from(page.lines);
+        final line = lines[sel.index];
+        final rect = OcrAddLineGeometry.bboxRect(line.bbox);
+        if (rect.isEmpty) return;
+        final moved = OcrAddLineGeometry.move(rect, offset, page);
+        if (moved == rect) return;
+        lines[sel.index] = line.copyWith(
+          bbox: OcrAddLineGeometry.rectToBbox(moved),
+        );
+        _updatePage(
+          data,
+          page.copyWith(
+            lines: lines,
+            text: lines.map((e) => e.text).join('\n'),
+          ),
+          isDirty: true,
+        );
+      case OcrEditorSelectionKind.image:
+        if (sel.index < 0 || sel.index >= page.images.length) return;
+        final images = List<OcrAssetModel>.from(page.images);
+        final asset = images[sel.index];
+        final rect = OcrAddLineGeometry.bboxRect(asset.bbox);
+        if (rect.isEmpty) return;
+        final moved = OcrAddLineGeometry.move(rect, offset, page);
+        if (moved == rect) return;
+        images[sel.index] = asset.copyWith(
+          bbox: OcrAddLineGeometry.rectToBbox(moved),
+        );
+        _updatePage(data, page.copyWith(images: images), isDirty: true);
+      case OcrEditorSelectionKind.table:
+        if (sel.index < 0 || sel.index >= page.tables.length) return;
+        final tables = List<OcrAssetModel>.from(page.tables);
+        final asset = tables[sel.index];
+        final rect = OcrAddLineGeometry.bboxRect(asset.bbox);
+        if (rect.isEmpty) return;
+        final moved = OcrAddLineGeometry.move(rect, offset, page);
+        if (moved == rect) return;
+        tables[sel.index] = asset.copyWith(
+          bbox: OcrAddLineGeometry.rectToBbox(moved),
+        );
+        _updatePage(data, page.copyWith(tables: tables), isDirty: true);
+    }
+  }
+
+  bool _canMoveSelectedBBox(int delta) {
+    final data = _loaded;
+    final sel = data?.selection;
+    if (data == null || sel == null) return false;
+
+    final page = data.currentPage;
+    final rect = switch (sel.kind) {
+      OcrEditorSelectionKind.line =>
+        sel.index >= 0 && sel.index < page.lines.length
+            ? OcrAddLineGeometry.bboxRect(page.lines[sel.index].bbox)
+            : Rect.zero,
+      OcrEditorSelectionKind.image =>
+        sel.index >= 0 && sel.index < page.images.length
+            ? OcrAddLineGeometry.bboxRect(page.images[sel.index].bbox)
+            : Rect.zero,
+      OcrEditorSelectionKind.table =>
+        sel.index >= 0 && sel.index < page.tables.length
+            ? OcrAddLineGeometry.bboxRect(page.tables[sel.index].bbox)
+            : Rect.zero,
+    };
+    if (rect.isEmpty) return false;
+    return OcrAddLineGeometry.canMoveVertically(rect, delta, page);
   }
 
   void deleteSelectedImage() {

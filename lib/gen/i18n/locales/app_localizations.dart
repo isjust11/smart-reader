@@ -4953,6 +4953,408 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore default'**
   String get restoreDefault;
+
+  /// No description provided for @ocr_editor.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR Editor'**
+  String get ocr_editor;
+
+  /// No description provided for @ocr_more_actions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get ocr_more_actions;
+
+  /// No description provided for @ocr_redo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get ocr_redo;
+
+  /// No description provided for @ocr_save_edits.
+  ///
+  /// In en, this message translates to:
+  /// **'Save edits'**
+  String get ocr_save_edits;
+
+  /// No description provided for @ocr_unsaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved'**
+  String get ocr_unsaved;
+
+  /// No description provided for @ocr_preview_edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview edited data'**
+  String get ocr_preview_edited;
+
+  /// No description provided for @ocr_normalize_page_preset.
+  ///
+  /// In en, this message translates to:
+  /// **'Normalize preset for current page'**
+  String get ocr_normalize_page_preset;
+
+  /// No description provided for @ocr_apply_body_page.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Body to whole page'**
+  String get ocr_apply_body_page;
+
+  /// No description provided for @ocr_export_txt.
+  ///
+  /// In en, this message translates to:
+  /// **'Export .txt'**
+  String get ocr_export_txt;
+
+  /// No description provided for @ocr_export_searchable_pdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Export searchable PDF'**
+  String get ocr_export_searchable_pdf;
+
+  /// No description provided for @ocr_requeue.
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocess (update page images & bbox)'**
+  String get ocr_requeue;
+
+  /// No description provided for @ocr_load_error.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load data'**
+  String get ocr_load_error;
+
+  /// No description provided for @ocr_normalize_page_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Normalized preset for the current page.'**
+  String get ocr_normalize_page_success;
+
+  /// No description provided for @ocr_apply_body_page_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied Body preset to all lines on the current page.'**
+  String get ocr_apply_body_page_success;
+
+  /// No description provided for @ocr_requeue_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocess request sent. Go back to the job list to track progress.'**
+  String get ocr_requeue_success;
+
+  /// No description provided for @ocr_export_txt_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported .txt file'**
+  String get ocr_export_txt_success;
+
+  /// No description provided for @ocr_export_pdf_processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing searchable PDF. Check back in a few seconds.'**
+  String get ocr_export_pdf_processing;
+
+  /// No description provided for @ocr_save_success.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR edits saved.'**
+  String get ocr_save_success;
+
+  /// No description provided for @ocr_preview_after_edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview after edits'**
+  String get ocr_preview_after_edit;
+
+  /// No description provided for @ocr_page_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page}'**
+  String ocr_page_label(int page);
+
+  /// No description provided for @ocr_editor_empty_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a bbox region on the preview to edit text or images.'**
+  String get ocr_editor_empty_hint;
+
+  /// No description provided for @ocr_add_line_missing_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR missed some text? Add a line manually to enter it.'**
+  String get ocr_add_line_missing_hint;
+
+  /// No description provided for @ocr_add_line_new.
+  ///
+  /// In en, this message translates to:
+  /// **'Add new text line'**
+  String get ocr_add_line_new;
+
+  /// No description provided for @ocr_line_header.
+  ///
+  /// In en, this message translates to:
+  /// **'Text line'**
+  String get ocr_line_header;
+
+  /// No description provided for @ocr_line_empty_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'No content yet — OCR did not recognize this area. Enter text below.'**
+  String get ocr_line_empty_hint;
+
+  /// No description provided for @ocr_confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence: {percent}%'**
+  String ocr_confidence(String percent);
+
+  /// No description provided for @ocr_content.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get ocr_content;
+
+  /// No description provided for @ocr_prev_missing_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous missing line'**
+  String get ocr_prev_missing_line;
+
+  /// No description provided for @ocr_next_missing_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Next missing line'**
+  String get ocr_next_missing_line;
+
+  /// No description provided for @ocr_move_up.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get ocr_move_up;
+
+  /// No description provided for @ocr_move_down.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get ocr_move_down;
+
+  /// No description provided for @ocr_delete_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete line'**
+  String get ocr_delete_line;
+
+  /// No description provided for @ocr_bold.
+  ///
+  /// In en, this message translates to:
+  /// **'Bold'**
+  String get ocr_bold;
+
+  /// No description provided for @ocr_italic.
+  ///
+  /// In en, this message translates to:
+  /// **'Italic'**
+  String get ocr_italic;
+
+  /// No description provided for @ocr_underline.
+  ///
+  /// In en, this message translates to:
+  /// **'Underline'**
+  String get ocr_underline;
+
+  /// No description provided for @ocr_clear_format.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear formatting'**
+  String get ocr_clear_format;
+
+  /// No description provided for @ocr_align_left.
+  ///
+  /// In en, this message translates to:
+  /// **'Align left'**
+  String get ocr_align_left;
+
+  /// No description provided for @ocr_align_center.
+  ///
+  /// In en, this message translates to:
+  /// **'Align center'**
+  String get ocr_align_center;
+
+  /// No description provided for @ocr_align_right.
+  ///
+  /// In en, this message translates to:
+  /// **'Align right'**
+  String get ocr_align_right;
+
+  /// No description provided for @ocr_align_justify.
+  ///
+  /// In en, this message translates to:
+  /// **'Justify'**
+  String get ocr_align_justify;
+
+  /// No description provided for @ocr_uppercase.
+  ///
+  /// In en, this message translates to:
+  /// **'UPPERCASE'**
+  String get ocr_uppercase;
+
+  /// No description provided for @ocr_lowercase.
+  ///
+  /// In en, this message translates to:
+  /// **'lowercase'**
+  String get ocr_lowercase;
+
+  /// No description provided for @ocr_style_tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Formatting is saved to the style model'**
+  String get ocr_style_tooltip;
+
+  /// No description provided for @ocr_figure.
+  ///
+  /// In en, this message translates to:
+  /// **'Figure'**
+  String get ocr_figure;
+
+  /// No description provided for @ocr_embedded_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Embedded image'**
+  String get ocr_embedded_image;
+
+  /// No description provided for @ocr_change_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Change image'**
+  String get ocr_change_image;
+
+  /// No description provided for @ocr_delete_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete image'**
+  String get ocr_delete_image;
+
+  /// No description provided for @ocr_table.
+  ///
+  /// In en, this message translates to:
+  /// **'Table'**
+  String get ocr_table;
+
+  /// No description provided for @ocr_table_html.
+  ///
+  /// In en, this message translates to:
+  /// **'Table HTML'**
+  String get ocr_table_html;
+
+  /// No description provided for @ocr_delete_table.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete table'**
+  String get ocr_delete_table;
+
+  /// No description provided for @ocr_add_line_selected_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the center to move, drag left/right edges to resize, then tap Insert.'**
+  String get ocr_add_line_selected_hint;
+
+  /// No description provided for @ocr_add_line_draw_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap or drag horizontally on the preview to place a line (height matches document lines).'**
+  String get ocr_add_line_draw_hint;
+
+  /// No description provided for @ocr_add_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Add line'**
+  String get ocr_add_line;
+
+  /// No description provided for @ocr_redraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Redraw'**
+  String get ocr_redraw;
+
+  /// No description provided for @ocr_insert.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert'**
+  String get ocr_insert;
+
+  /// No description provided for @ocr_zoom_out.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get ocr_zoom_out;
+
+  /// No description provided for @ocr_zoom_reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset zoom'**
+  String get ocr_zoom_reset;
+
+  /// No description provided for @ocr_zoom_in.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get ocr_zoom_in;
+
+  /// No description provided for @ocr_hide_document_background.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide document background'**
+  String get ocr_hide_document_background;
+
+  /// No description provided for @ocr_show_document_background.
+  ///
+  /// In en, this message translates to:
+  /// **'Show document background'**
+  String get ocr_show_document_background;
+
+  /// No description provided for @ocr_no_source_file.
+  ///
+  /// In en, this message translates to:
+  /// **'No source file to preview.'**
+  String get ocr_no_source_file;
+
+  /// No description provided for @ocr_pdf_render_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not render PDF page.'**
+  String get ocr_pdf_render_failed;
+
+  /// No description provided for @ocr_preset_body.
+  ///
+  /// In en, this message translates to:
+  /// **'Body'**
+  String get ocr_preset_body;
+
+  /// No description provided for @ocr_preset_h1.
+  ///
+  /// In en, this message translates to:
+  /// **'H1'**
+  String get ocr_preset_h1;
+
+  /// No description provided for @ocr_preset_h2.
+  ///
+  /// In en, this message translates to:
+  /// **'H2'**
+  String get ocr_preset_h2;
+
+  /// No description provided for @ocr_preset_h3.
+  ///
+  /// In en, this message translates to:
+  /// **'H3'**
+  String get ocr_preset_h3;
+
+  /// No description provided for @ocr_preset_caption.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption'**
+  String get ocr_preset_caption;
 }
 
 class _AppLocalizationsDelegate

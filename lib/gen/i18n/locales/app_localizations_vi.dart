@@ -2543,4 +2543,218 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get restoreDefault => 'Khôi phục mặc định';
+
+  @override
+  String get ocr_editor => 'Trình chỉnh sửa OCR';
+
+  @override
+  String get ocr_more_actions => 'Thêm thao tác';
+
+  @override
+  String get ocr_redo => 'Làm lại';
+
+  @override
+  String get ocr_save_edits => 'Lưu chỉnh sửa';
+
+  @override
+  String get ocr_unsaved => 'Chưa lưu';
+
+  @override
+  String get ocr_preview_edited => 'Preview dữ liệu đã sửa';
+
+  @override
+  String get ocr_normalize_page_preset => 'Chuẩn hóa preset trang hiện tại';
+
+  @override
+  String get ocr_apply_body_page => 'Áp Body cho toàn trang';
+
+  @override
+  String get ocr_export_txt => 'Xuất .txt';
+
+  @override
+  String get ocr_export_searchable_pdf => 'Xuất searchable PDF';
+
+  @override
+  String get ocr_requeue => 'Xử lý lại (cập nhật ảnh trang, bbox)';
+
+  @override
+  String get ocr_load_error => 'Lỗi tải dữ liệu';
+
+  @override
+  String get ocr_normalize_page_success =>
+      'Đã chuẩn hóa preset cho trang hiện tại.';
+
+  @override
+  String get ocr_apply_body_page_success =>
+      'Đã áp Body cho toàn bộ dòng của trang hiện tại.';
+
+  @override
+  String get ocr_requeue_success =>
+      'Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.';
+
+  @override
+  String get ocr_export_txt_success => 'Đã xuất file .txt';
+
+  @override
+  String get ocr_export_pdf_processing =>
+      'Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.';
+
+  @override
+  String get ocr_save_success => 'Đã lưu chỉnh sửa OCR.';
+
+  @override
+  String get ocr_preview_after_edit => 'Preview sau chỉnh sửa';
+
+  @override
+  String ocr_page_label(int page) {
+    return 'Trang $page';
+  }
+
+  @override
+  String get ocr_editor_empty_hint =>
+      'Chạm vào vùng bbox trên preview để chỉnh sửa text hoặc hình ảnh.';
+
+  @override
+  String get ocr_add_line_missing_hint =>
+      'OCR bỏ sót một đoạn text? Thêm dòng thủ công để nhập.';
+
+  @override
+  String get ocr_add_line_new => 'Thêm dòng text mới';
+
+  @override
+  String get ocr_line_header => 'Dòng văn bản';
+
+  @override
+  String get ocr_line_empty_hint =>
+      'Chưa có nội dung — OCR không nhận dạng được, hãy nhập tay bên dưới.';
+
+  @override
+  String ocr_confidence(String percent) {
+    return 'Độ tin cậy: $percent%';
+  }
+
+  @override
+  String get ocr_content => 'Nội dung';
+
+  @override
+  String get ocr_prev_missing_line => 'Dòng thiếu trước';
+
+  @override
+  String get ocr_next_missing_line => 'Dòng thiếu kế';
+
+  @override
+  String get ocr_move_up => 'Đưa lên';
+
+  @override
+  String get ocr_move_down => 'Đưa xuống';
+
+  @override
+  String get ocr_delete_line => 'Xóa dòng';
+
+  @override
+  String get ocr_bold => 'Đậm';
+
+  @override
+  String get ocr_italic => 'Nghiêng';
+
+  @override
+  String get ocr_underline => 'Gạch chân';
+
+  @override
+  String get ocr_clear_format => 'Xóa định dạng';
+
+  @override
+  String get ocr_align_left => 'Căn trái';
+
+  @override
+  String get ocr_align_center => 'Căn giữa';
+
+  @override
+  String get ocr_align_right => 'Căn phải';
+
+  @override
+  String get ocr_align_justify => 'Căn đều';
+
+  @override
+  String get ocr_uppercase => 'VIẾT HOA';
+
+  @override
+  String get ocr_lowercase => 'viết thường';
+
+  @override
+  String get ocr_style_tooltip => 'Định dạng đang lưu vào style model';
+
+  @override
+  String get ocr_figure => 'Hình minh họa';
+
+  @override
+  String get ocr_embedded_image => 'Ảnh nhúng';
+
+  @override
+  String get ocr_change_image => 'Đổi ảnh';
+
+  @override
+  String get ocr_delete_image => 'Xóa ảnh';
+
+  @override
+  String get ocr_table => 'Bảng';
+
+  @override
+  String get ocr_table_html => 'HTML bảng';
+
+  @override
+  String get ocr_delete_table => 'Xóa bảng';
+
+  @override
+  String get ocr_add_line_selected_hint =>
+      'Kéo giữa để di chuyển, kéo mép trái/phải để chỉnh rộng, bấm Insert để chèn.';
+
+  @override
+  String get ocr_add_line_draw_hint =>
+      'Chạm hoặc kéo ngang trên preview để đặt dòng (chiều cao khớp dòng trong tài liệu).';
+
+  @override
+  String get ocr_add_line => 'Thêm dòng';
+
+  @override
+  String get ocr_redraw => 'Vẽ lại';
+
+  @override
+  String get ocr_insert => 'Insert';
+
+  @override
+  String get ocr_zoom_out => 'Thu nhỏ';
+
+  @override
+  String get ocr_zoom_reset => 'Về kích thước gốc';
+
+  @override
+  String get ocr_zoom_in => 'Phóng to';
+
+  @override
+  String get ocr_hide_document_background => 'Ẩn nền tài liệu';
+
+  @override
+  String get ocr_show_document_background => 'Hiện nền tài liệu';
+
+  @override
+  String get ocr_no_source_file => 'Không có file gốc để preview.';
+
+  @override
+  String get ocr_pdf_render_failed => 'Không render được trang PDF.';
+
+  @override
+  String get ocr_preset_body => 'Body';
+
+  @override
+  String get ocr_preset_h1 => 'H1';
+
+  @override
+  String get ocr_preset_h2 => 'H2';
+
+  @override
+  String get ocr_preset_h3 => 'H3';
+
+  @override
+  String get ocr_preset_caption => 'Caption';
 }
