@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -49,6 +50,9 @@ class OcrPageCanvas extends StatelessWidget {
   final void Function(OcrPendingRectEdge edge, Offset delta)? onSelectedLineResize;
   final VoidCallback? onSelectedLineEditEnd;
 
+  /// Gọi sau khi preview nền trắng vẽ xong các thành phần renderDirty.
+  final VoidCallback? onRenderDirtyAcknowledged;
+
   const OcrPageCanvas({
     super.key,
     required this.job,
@@ -72,6 +76,7 @@ class OcrPageCanvas extends StatelessWidget {
     this.onSelectedLineMove,
     this.onSelectedLineResize,
     this.onSelectedLineEditEnd,
+    this.onRenderDirtyAcknowledged,
   });
 
   @override
@@ -125,10 +130,13 @@ class OcrPageCanvas extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             if (showDocumentBackground)
-              imageWidget!
+              IgnorePointer(child: imageWidget!)
             else ...[
               const ColoredBox(color: Colors.white),
-              _OcrTextContentLayer(page: page),
+              _OcrTextContentLayer(
+                page: page,
+                onRenderDirtyAcknowledged: onRenderDirtyAcknowledged,
+              ),
             ],
             OcrBboxOverlay(
               page: page,
@@ -198,51 +206,124 @@ class OcrPageCanvas extends StatelessWidget {
   }
 }
 
-/// Render text OCR lên canvas trắng để kiểm tra bố cục sau khi ẩn nền scan.
-class _OcrTextContentLayer extends StatelessWidget {
+/// Render nội dung OCR (text + ảnh/bảng) lên canvas trắng — từng tile riêng,
+/// chỉ repaint thành phần có [OcrLineModel.renderDirty] /
+/// [OcrAssetModel.renderDirty].
+class _OcrTextContentLayer extends StatefulWidget {
   final OcrPageModel page;
+  final VoidCallback? onRenderDirtyAcknowledged;
 
-  const _OcrTextContentLayer({required this.page});
+  const _OcrTextContentLayer({
+    required this.page,
+    this.onRenderDirtyAcknowledged,
+  });
+
+  @override
+  State<_OcrTextContentLayer> createState() => _OcrTextContentLayerState();
+}
+
+class _OcrTextContentLayerState extends State<_OcrTextContentLayer> {
+  @override
+  void didUpdateWidget(covariant _OcrTextContentLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.page.hasRenderDirty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onRenderDirtyAcknowledged?.call();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _OcrTextContentPainter(page: page),
-      size: Size.infinite,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var i = 0; i < widget.page.lines.length; i++)
+          _OcrLineContentTile(
+            key: ValueKey('ocr-line-$i'),
+            line: widget.page.lines[i],
+          ),
+        for (var i = 0; i < widget.page.images.length; i++)
+          if (!OcrAddLineGeometry.isFullPageBbox(
+            widget.page.images[i].bbox,
+            widget.page,
+          ))
+            _OcrAssetContentTile(
+              key: ValueKey('ocr-image-$i-${widget.page.images[i].renderDirty}'),
+              asset: widget.page.images[i],
+            ),
+        for (var i = 0; i < widget.page.tables.length; i++)
+          if (!OcrAddLineGeometry.isFullPageBbox(
+            widget.page.tables[i].bbox,
+            widget.page,
+          ))
+            _OcrAssetContentTile(
+              key: ValueKey('ocr-table-$i-${widget.page.tables[i].renderDirty}'),
+              asset: widget.page.tables[i],
+            ),
+      ],
     );
   }
 }
 
-class _OcrTextContentPainter extends CustomPainter {
-  final OcrPageModel page;
+class _OcrLineContentTile extends StatelessWidget {
+  final OcrLineModel line;
 
-  const _OcrTextContentPainter({required this.page});
+  const _OcrLineContentTile({super.key, required this.line});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = line.text.trim();
+    final rect = OcrAddLineGeometry.bboxRect(line.bbox);
+    if (text.isEmpty || rect.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      child: RepaintBoundary(
+        child: CustomPaint(
+          painter: _OcrLinePainter(line: line, rect: rect),
+          size: Size(rect.width, rect.height),
+        ),
+      ),
+    );
+  }
+}
+
+class _OcrLinePainter extends CustomPainter {
+  final OcrLineModel line;
+  final Rect rect;
+
+  const _OcrLinePainter({required this.line, required this.rect});
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final line in page.lines) {
-      final text = line.text.trim();
-      final rect = OcrAddLineGeometry.bboxRect(line.bbox);
-      if (text.isEmpty || rect.isEmpty) continue;
+    final style = line.style ?? const OcrTextStyleModel();
+    final painter = TextPainter(
+      text: TextSpan(text: line.text.trim(), style: _textStyle(style, rect)),
+      textAlign: _textAlign(style.align),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: rect.width);
 
-      final style = line.style ?? const OcrTextStyleModel();
-      final painter = TextPainter(
-        text: TextSpan(text: text, style: _textStyle(style, rect)),
-        textAlign: _textAlign(style.align),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        ellipsis: '…',
-      )..layout(maxWidth: rect.width);
-
-      final top = rect.top + math.max(0, (rect.height - painter.height) / 2);
-      painter.paint(canvas, Offset(rect.left, top));
-    }
+    final top = math.max(0.0, (rect.height - painter.height) / 2);
+    painter.paint(canvas, Offset(0, top));
   }
 
-  TextStyle _textStyle(OcrTextStyleModel style, Rect rect) {
+  @override
+  bool shouldRepaint(covariant _OcrLinePainter oldDelegate) {
+    return line.renderDirty ||
+        oldDelegate.line.text != line.text ||
+        oldDelegate.line.bbox != line.bbox ||
+        oldDelegate.line.style != line.style;
+  }
+
+  static TextStyle _textStyle(OcrTextStyleModel style, Rect rect) {
     return TextStyle(
       fontFamily: style.fontFamily,
-      // Ưu tiên khớp bbox của tài liệu thay vì cỡ chữ UI 11-18pt.
       fontSize: (rect.height * 0.72).clamp(6.0, rect.height),
       color: _parseColor(style.colorHex) ?? Colors.black,
       fontWeight: style.bold ? FontWeight.w700 : FontWeight.w400,
@@ -252,7 +333,7 @@ class _OcrTextContentPainter extends CustomPainter {
     );
   }
 
-  TextAlign _textAlign(String? align) {
+  static TextAlign _textAlign(String? align) {
     switch (align) {
       case 'center':
         return TextAlign.center;
@@ -265,17 +346,55 @@ class _OcrTextContentPainter extends CustomPainter {
     }
   }
 
-  Color? _parseColor(String? hex) {
+  static Color? _parseColor(String? hex) {
     if (hex == null || hex.isEmpty) return null;
     final value = hex.replaceFirst('#', '');
     final normalized = value.length == 6 ? 'FF$value' : value;
     final parsed = int.tryParse(normalized, radix: 16);
     return parsed == null ? null : Color(parsed);
   }
+}
+
+class _OcrAssetContentTile extends StatelessWidget {
+  final OcrAssetModel asset;
+
+  const _OcrAssetContentTile({super.key, required this.asset});
 
   @override
-  bool shouldRepaint(covariant _OcrTextContentPainter oldDelegate) =>
-      oldDelegate.page != page;
+  Widget build(BuildContext context) {
+    final rect = OcrAddLineGeometry.bboxRect(asset.bbox);
+    if (rect.isEmpty || rect.width < 2 || rect.height < 2) {
+      return const SizedBox.shrink();
+    }
+
+    final image = _assetImageWidget(asset);
+    if (image == null) return const SizedBox.shrink();
+
+    return Positioned(
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      child: RepaintBoundary(child: ClipRect(child: image)),
+    );
+  }
+
+  Widget? _assetImageWidget(OcrAssetModel asset) {
+    final local = asset.localImagePath;
+    if (local != null && local.isNotEmpty && File(local).existsSync()) {
+      return Image.file(File(local), fit: BoxFit.fill);
+    }
+    final url = asset.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.fill,
+        placeholder: (_, __) => const SizedBox.shrink(),
+        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+    return null;
+  }
 }
 
 /// Khung có thể kéo giữa / kéo mép trái-phải để chỉnh vị trí và chiều rộng.

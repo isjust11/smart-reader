@@ -23,24 +23,28 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m0(title) =>
       "Are you sure you want to delete book \"${title}\" from library?";
 
-  static String m1(percent) => "Confidence: ${percent}%";
+  static String m1(current, total) => "Page ${current}/${total}";
 
-  static String m2(page) => "Page ${page}";
+  static String m2(percent) => "Confidence: ${percent}%";
 
-  static String m3(current, total) => "Page ${current}/${total}";
+  static String m3(page) => "Page ${page}";
 
-  static String m4(error) => "Cannot share: ${error}";
+  static String m4(count) => "${count} pages selected";
 
-  static String m5(title) =>
+  static String m5(current, total) => "Page ${current}/${total}";
+
+  static String m6(error) => "Cannot share: ${error}";
+
+  static String m7(title) =>
       "\"${title}\"is shared from Readbox. Download the app to read for free! 📚";
 
-  static String m6(error) => "Read error: ${error}";
+  static String m8(error) => "Read error: ${error}";
 
-  static String m7(path) => "File saved to: ${path}";
+  static String m9(path) => "File saved to: ${path}";
 
-  static String m8(count) => "${count} pages";
+  static String m10(count) => "${count} pages";
 
-  static String m9(count) => "${count} ratings";
+  static String m11(count) => "${count} ratings";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -803,6 +807,42 @@ class MessageLookup extends MessageLookupByLibrary {
     "notificationsCleared": MessageLookupByLibrary.simpleMessage(
       "All notifications cleared",
     ),
+    "ocr_activity_empty_subtitle": MessageLookupByLibrary.simpleMessage(
+      "OCR jobs and file exports being processed will appear here.",
+    ),
+    "ocr_activity_empty_title": MessageLookupByLibrary.simpleMessage(
+      "Nothing in progress",
+    ),
+    "ocr_activity_export_failed_hint": MessageLookupByLibrary.simpleMessage(
+      "File export failed.",
+    ),
+    "ocr_activity_kind_export": MessageLookupByLibrary.simpleMessage(
+      "PDF/TXT export",
+    ),
+    "ocr_activity_kind_ocr": MessageLookupByLibrary.simpleMessage(
+      "OCR recognition",
+    ),
+    "ocr_activity_open_editor": MessageLookupByLibrary.simpleMessage("Edit"),
+    "ocr_activity_open_pdf": MessageLookupByLibrary.simpleMessage("Open PDF"),
+    "ocr_activity_open_txt": MessageLookupByLibrary.simpleMessage("Open TXT"),
+    "ocr_activity_page_progress": m1,
+    "ocr_activity_processing": MessageLookupByLibrary.simpleMessage(
+      "Processing...",
+    ),
+    "ocr_activity_retry": MessageLookupByLibrary.simpleMessage("Retry"),
+    "ocr_activity_section_export": MessageLookupByLibrary.simpleMessage(
+      "File export",
+    ),
+    "ocr_activity_section_export_failed": MessageLookupByLibrary.simpleMessage(
+      "Export failed",
+    ),
+    "ocr_activity_section_ocr": MessageLookupByLibrary.simpleMessage(
+      "Text recognition",
+    ),
+    "ocr_activity_section_ready": MessageLookupByLibrary.simpleMessage(
+      "Ready to open",
+    ),
+    "ocr_activity_title": MessageLookupByLibrary.simpleMessage("In progress"),
     "ocr_add_line": MessageLookupByLibrary.simpleMessage("Add line"),
     "ocr_add_line_draw_hint": MessageLookupByLibrary.simpleMessage(
       "Tap or drag horizontally on the preview to place a line (height matches document lines).",
@@ -816,6 +856,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ocr_add_line_selected_hint": MessageLookupByLibrary.simpleMessage(
       "Drag the center to move, drag left/right edges to resize, then tap Insert.",
     ),
+    "ocr_add_page": MessageLookupByLibrary.simpleMessage("Add page"),
     "ocr_align_center": MessageLookupByLibrary.simpleMessage("Align center"),
     "ocr_align_justify": MessageLookupByLibrary.simpleMessage("Justify"),
     "ocr_align_left": MessageLookupByLibrary.simpleMessage("Align left"),
@@ -827,11 +868,15 @@ class MessageLookup extends MessageLookupByLibrary {
       "Applied Body preset to all lines on the current page.",
     ),
     "ocr_bold": MessageLookupByLibrary.simpleMessage("Bold"),
+    "ocr_camera_permission": MessageLookupByLibrary.simpleMessage(
+      "Camera permission is required to scan documents.",
+    ),
     "ocr_change_image": MessageLookupByLibrary.simpleMessage("Change image"),
+    "ocr_clear_all": MessageLookupByLibrary.simpleMessage("Clear all"),
     "ocr_clear_format": MessageLookupByLibrary.simpleMessage(
       "Clear formatting",
     ),
-    "ocr_confidence": m1,
+    "ocr_confidence": m2,
     "ocr_content": MessageLookupByLibrary.simpleMessage("Content"),
     "ocr_delete_image": MessageLookupByLibrary.simpleMessage("Delete image"),
     "ocr_delete_line": MessageLookupByLibrary.simpleMessage("Delete line"),
@@ -845,6 +890,12 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "ocr_export_pdf_processing": MessageLookupByLibrary.simpleMessage(
       "Processing searchable PDF. Check back in a few seconds.",
+    ),
+    "ocr_export_pdf_success": MessageLookupByLibrary.simpleMessage(
+      "Searchable PDF is ready.",
+    ),
+    "ocr_export_pdf_timeout": MessageLookupByLibrary.simpleMessage(
+      "PDF export timed out. Please try again later.",
     ),
     "ocr_export_searchable_pdf": MessageLookupByLibrary.simpleMessage(
       "Export searchable PDF",
@@ -882,7 +933,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ocr_normalize_page_success": MessageLookupByLibrary.simpleMessage(
       "Normalized preset for the current page.",
     ),
-    "ocr_page_label": m2,
+    "ocr_page_label": m3,
     "ocr_pdf_render_failed": MessageLookupByLibrary.simpleMessage(
       "Could not render PDF page.",
     ),
@@ -922,6 +973,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "ocr_table_html": MessageLookupByLibrary.simpleMessage("Table HTML"),
     "ocr_underline": MessageLookupByLibrary.simpleMessage("Underline"),
     "ocr_unsaved": MessageLookupByLibrary.simpleMessage("Unsaved"),
+    "ocr_upload_multi_pdf_name": MessageLookupByLibrary.simpleMessage(
+      "scanned_document.pdf",
+    ),
+    "ocr_upload_pages_count": m4,
+    "ocr_upload_reorder_hint": MessageLookupByLibrary.simpleMessage(
+      "Drag to reorder pages before OCR",
+    ),
     "ocr_uppercase": MessageLookupByLibrary.simpleMessage("UPPERCASE"),
     "ocr_zoom_in": MessageLookupByLibrary.simpleMessage("Zoom in"),
     "ocr_zoom_out": MessageLookupByLibrary.simpleMessage("Zoom out"),
@@ -1024,7 +1082,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pdf_note_hint": MessageLookupByLibrary.simpleMessage("Enter note"),
     "pdf_notes_list": MessageLookupByLibrary.simpleMessage("Notes list"),
     "pdf_page_number": MessageLookupByLibrary.simpleMessage("Page number"),
-    "pdf_page_of": m3,
+    "pdf_page_of": m5,
     "pdf_path_label": MessageLookupByLibrary.simpleMessage("Path:"),
     "pdf_please_wait": MessageLookupByLibrary.simpleMessage("Please wait"),
     "pdf_read_ebook": MessageLookupByLibrary.simpleMessage("Read ebook"),
@@ -1045,14 +1103,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "pdf_search_tooltip": MessageLookupByLibrary.simpleMessage("Search"),
     "pdf_share": MessageLookupByLibrary.simpleMessage("Share"),
-    "pdf_share_error": m4,
+    "pdf_share_error": m6,
     "pdf_share_file_not_found": MessageLookupByLibrary.simpleMessage(
       "File not found to share",
     ),
     "pdf_share_success": MessageLookupByLibrary.simpleMessage(
       "Shared successfully",
     ),
-    "pdf_share_text": m5,
+    "pdf_share_text": m7,
     "pdf_share_wait_download": MessageLookupByLibrary.simpleMessage(
       "PDF is loading, please wait and try again",
     ),
@@ -1063,7 +1121,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Text select: On",
     ),
     "pdf_toolbar": MessageLookupByLibrary.simpleMessage("Toolbar"),
-    "pdf_tts_read_error": m6,
+    "pdf_tts_read_error": m8,
     "pdf_undo": MessageLookupByLibrary.simpleMessage("Undo"),
     "pdf_view_file_info": MessageLookupByLibrary.simpleMessage(
       "View file info",
@@ -1531,11 +1589,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "tools_document_scanner_description": MessageLookupByLibrary.simpleMessage(
       "Scan documents using camera",
     ),
-    "tools_file_saved_to": m7,
+    "tools_file_saved_to": m9,
     "tools_no_file_selected": MessageLookupByLibrary.simpleMessage(
       "No file selected",
     ),
-    "tools_pages_count": m8,
+    "tools_pages_count": m10,
     "tools_preview": MessageLookupByLibrary.simpleMessage("Preview"),
     "tools_processing": MessageLookupByLibrary.simpleMessage("Processing..."),
     "tools_remove_page": MessageLookupByLibrary.simpleMessage("Remove page"),
@@ -1569,7 +1627,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Total Interactions",
     ),
     "total_pages": MessageLookupByLibrary.simpleMessage("Total pages"),
-    "total_ratings": m9,
+    "total_ratings": m11,
     "transactionId": MessageLookupByLibrary.simpleMessage("Transaction ID"),
     "transaction_id": MessageLookupByLibrary.simpleMessage("Transaction ID"),
     "translate": MessageLookupByLibrary.simpleMessage("Language translation"),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Chia không gian thành nhiều khung theo tỷ lệ [flexes] (ví dụ `[2, 1]` →
 /// khung A ~66%, khung B ~33%). Khi kéo giãn màn hình, tỷ lệ được giữ; có thể
@@ -158,9 +157,6 @@ class _SplitDividerState extends State<_SplitDivider> {
     final lineColor = active
         ? widget.colorScheme.primary
         : widget.colorScheme.outline.withValues(alpha: 0.35);
-    final handleColor = active
-        ? widget.colorScheme.primary
-        : widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.55);
 
     return MouseRegion(
       cursor: isHorizontal

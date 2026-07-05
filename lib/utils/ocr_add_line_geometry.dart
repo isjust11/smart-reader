@@ -29,6 +29,19 @@ class OcrAddLineGeometry {
   static double pageHeight(OcrPageModel page) =>
       page.height > 0 ? page.height.toDouble() : 1400.0;
 
+  /// Bbox phủ ≥ [ratio] diện tích trang — thường là ảnh chụp bị nhận nhầm figure.
+  static bool isFullPageBbox(
+    List<Offset> bbox,
+    OcrPageModel page, {
+    double ratio = 0.85,
+  }) {
+    if (bbox.isEmpty) return false;
+    final pageArea = pageWidth(page) * pageHeight(page);
+    if (pageArea <= 0) return false;
+    final r = bboxRect(bbox);
+    return r.width * r.height >= pageArea * ratio;
+  }
+
   /// Chiều cao dòng điển hình — median các bbox text trên trang.
   static double typicalLineHeight(OcrPageModel page) {
     final heights = page.lines

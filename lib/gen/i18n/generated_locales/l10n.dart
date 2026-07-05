@@ -7488,6 +7488,186 @@ class AppLocalizations {
     );
   }
 
+  /// `PDF searchable đã sẵn sàng.`
+  String get ocr_export_pdf_success {
+    return Intl.message(
+      'PDF searchable đã sẵn sàng.',
+      name: 'ocr_export_pdf_success',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Hết thời gian chờ export PDF. Vui lòng thử lại sau.`
+  String get ocr_export_pdf_timeout {
+    return Intl.message(
+      'Hết thời gian chờ export PDF. Vui lòng thử lại sau.',
+      name: 'ocr_export_pdf_timeout',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đang xử lý`
+  String get ocr_activity_title {
+    return Intl.message(
+      'Đang xử lý',
+      name: 'ocr_activity_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Nhận dạng văn bản`
+  String get ocr_activity_section_ocr {
+    return Intl.message(
+      'Nhận dạng văn bản',
+      name: 'ocr_activity_section_ocr',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất file`
+  String get ocr_activity_section_export {
+    return Intl.message(
+      'Xuất file',
+      name: 'ocr_activity_section_export',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `File sẵn sàng`
+  String get ocr_activity_section_ready {
+    return Intl.message(
+      'File sẵn sàng',
+      name: 'ocr_activity_section_ready',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất file thất bại`
+  String get ocr_activity_section_export_failed {
+    return Intl.message(
+      'Xuất file thất bại',
+      name: 'ocr_activity_section_export_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Không có tác vụ đang chờ`
+  String get ocr_activity_empty_title {
+    return Intl.message(
+      'Không có tác vụ đang chờ',
+      name: 'ocr_activity_empty_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Ảnh, văn bản OCR và file export đang xử lý sẽ hiển thị tại đây.`
+  String get ocr_activity_empty_subtitle {
+    return Intl.message(
+      'Ảnh, văn bản OCR và file export đang xử lý sẽ hiển thị tại đây.',
+      name: 'ocr_activity_empty_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Thử lại`
+  String get ocr_activity_retry {
+    return Intl.message(
+      'Thử lại',
+      name: 'ocr_activity_retry',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Nhận dạng OCR`
+  String get ocr_activity_kind_ocr {
+    return Intl.message(
+      'Nhận dạng OCR',
+      name: 'ocr_activity_kind_ocr',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất PDF/TXT`
+  String get ocr_activity_kind_export {
+    return Intl.message(
+      'Xuất PDF/TXT',
+      name: 'ocr_activity_kind_export',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đang xử lý...`
+  String get ocr_activity_processing {
+    return Intl.message(
+      'Đang xử lý...',
+      name: 'ocr_activity_processing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Trang {current}/{total}`
+  String ocr_activity_page_progress(int current, int total) {
+    return Intl.message(
+      'Trang $current/$total',
+      name: 'ocr_activity_page_progress',
+      desc: '',
+      args: [current, total],
+    );
+  }
+
+  /// `Mở PDF`
+  String get ocr_activity_open_pdf {
+    return Intl.message(
+      'Mở PDF',
+      name: 'ocr_activity_open_pdf',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mở TXT`
+  String get ocr_activity_open_txt {
+    return Intl.message(
+      'Mở TXT',
+      name: 'ocr_activity_open_txt',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chỉnh sửa`
+  String get ocr_activity_open_editor {
+    return Intl.message(
+      'Chỉnh sửa',
+      name: 'ocr_activity_open_editor',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Xuất file thất bại.`
+  String get ocr_activity_export_failed_hint {
+    return Intl.message(
+      'Xuất file thất bại.',
+      name: 'ocr_activity_export_failed_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Đã lưu chỉnh sửa OCR.`
   String get ocr_save_success {
     return Intl.message(
@@ -7893,6 +8073,61 @@ class AppLocalizations {
     return Intl.message(
       'Caption',
       name: 'ocr_preset_caption',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Đã chọn {count} trang`
+  String ocr_upload_pages_count(int count) {
+    return Intl.message(
+      'Đã chọn $count trang',
+      name: 'ocr_upload_pages_count',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Kéo thả để sắp xếp thứ tự trang trước khi OCR`
+  String get ocr_upload_reorder_hint {
+    return Intl.message(
+      'Kéo thả để sắp xếp thứ tự trang trước khi OCR',
+      name: 'ocr_upload_reorder_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Thêm trang`
+  String get ocr_add_page {
+    return Intl.message('Thêm trang', name: 'ocr_add_page', desc: '', args: []);
+  }
+
+  /// `Xóa tất cả`
+  String get ocr_clear_all {
+    return Intl.message(
+      'Xóa tất cả',
+      name: 'ocr_clear_all',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Cần cấp quyền camera để chụp tài liệu.`
+  String get ocr_camera_permission {
+    return Intl.message(
+      'Cần cấp quyền camera để chụp tài liệu.',
+      name: 'ocr_camera_permission',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `tai_lieu_quet.pdf`
+  String get ocr_upload_multi_pdf_name {
+    return Intl.message(
+      'tai_lieu_quet.pdf',
+      name: 'ocr_upload_multi_pdf_name',
       desc: '',
       args: [],
     );

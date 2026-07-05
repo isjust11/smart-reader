@@ -103,6 +103,12 @@ void registerCubit(GetIt getIt) {
       getIt.get<OcrSocketService>(),
     ),
   );
+  getIt.registerFactory(
+    () => OcrActivityCubit(
+      getIt.get<OcrRepository>(),
+      getIt.get<OcrSocketService>(),
+    ),
+  );
 }
 
 void registerRepositories(GetIt getIt) {

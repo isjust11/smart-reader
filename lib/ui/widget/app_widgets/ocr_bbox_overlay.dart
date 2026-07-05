@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/domain/data/models/ocr_result_model.dart';
+import 'package:readbox/utils/ocr_add_line_geometry.dart';
 
 /// Vẽ overlay bbox text / ảnh / bảng lên preview trang.
 class OcrBboxOverlay extends StatelessWidget {
@@ -35,11 +36,33 @@ class OcrBboxOverlay extends StatelessWidget {
 
     return Stack(
       children: [
+        for (var i = 0; i < page.images.length; i++)
+          if (!OcrAddLineGeometry.isFullPageBbox(page.images[i].bbox, page))
+            _buildHitBox(
+              rect: _scaleRect(_bboxRect(page.images[i].bbox), scaleX, scaleY),
+              color: page.images[i].type == 'figure'
+                  ? Colors.orange
+                  : Colors.green,
+              selected:
+                  selection?.kind == OcrEditorSelectionKind.image &&
+                  selection?.index == i,
+              baseStroke: baseStroke,
+              onTap: () => onImageTap?.call(i),
+            ),
+        for (var i = 0; i < page.tables.length; i++)
+          if (!OcrAddLineGeometry.isFullPageBbox(page.tables[i].bbox, page))
+            _buildHitBox(
+              rect: _scaleRect(_bboxRect(page.tables[i].bbox), scaleX, scaleY),
+              color: Colors.purple,
+              selected:
+                  selection?.kind == OcrEditorSelectionKind.table &&
+                  selection?.index == i,
+              baseStroke: baseStroke,
+              onTap: () => onTableTap?.call(i),
+            ),
         for (var i = 0; i < page.lines.length; i++)
           _buildHitBox(
             rect: _scaleRect(_bboxRect(page.lines[i].bbox), scaleX, scaleY),
-            // Dòng chưa có text (OCR bỏ sót / vừa thêm tay, chưa nhập) — vẽ
-            // nét đứt màu hổ phách để nổi bật "cần nhập nội dung".
             color: page.lines[i].text.trim().isEmpty
                 ? Colors.amber.shade800
                 : Colors.blue,
@@ -49,28 +72,6 @@ class OcrBboxOverlay extends StatelessWidget {
                 selection?.index == i,
             baseStroke: baseStroke,
             onTap: () => onLineTap?.call(i),
-          ),
-        for (var i = 0; i < page.images.length; i++)
-          _buildHitBox(
-            rect: _scaleRect(_bboxRect(page.images[i].bbox), scaleX, scaleY),
-            color: page.images[i].type == 'figure'
-                ? Colors.orange
-                : Colors.green,
-            selected:
-                selection?.kind == OcrEditorSelectionKind.image &&
-                selection?.index == i,
-            baseStroke: baseStroke,
-            onTap: () => onImageTap?.call(i),
-          ),
-        for (var i = 0; i < page.tables.length; i++)
-          _buildHitBox(
-            rect: _scaleRect(_bboxRect(page.tables[i].bbox), scaleX, scaleY),
-            color: Colors.purple,
-            selected:
-                selection?.kind == OcrEditorSelectionKind.table &&
-                selection?.index == i,
-            baseStroke: baseStroke,
-            onTap: () => onTableTap?.call(i),
           ),
       ],
     );

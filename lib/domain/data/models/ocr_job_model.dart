@@ -86,6 +86,20 @@ class OcrJobModel {
   bool get isFinished =>
       status == OcrJobStatus.done || status == OcrJobStatus.failed;
 
+  bool get isOcrPending =>
+      status == OcrJobStatus.queued || status == OcrJobStatus.processing;
+
+  bool get isExportPending => exportStatus == 'processing';
+
+  bool get isExportFailed => exportStatus == 'failed';
+
+  bool get isExportReady =>
+      exportStatus == 'done' &&
+      ((pdfUrl != null && pdfUrl!.isNotEmpty) ||
+          (txtUrl != null && txtUrl!.isNotEmpty));
+
+  bool get isActivityPending => isOcrPending || isExportPending;
+
   String get displayName =>
       (originalName != null && originalName!.isNotEmpty)
           ? originalName!
@@ -121,12 +135,18 @@ class OcrJobModel {
     int? processedPages,
     int? totalPages,
     String? error,
+    String? exportStatus,
+    String? pdfUrl,
+    String? exportError,
   }) {
     return copyWith(
       status: OcrJobStatus.fromString(status),
       processedPages: processedPages ?? this.processedPages,
       totalPages: totalPages ?? this.totalPages,
       error: error,
+      exportStatus: exportStatus ?? this.exportStatus,
+      pdfUrl: pdfUrl ?? this.pdfUrl,
+      exportError: exportError ?? this.exportError,
     );
   }
 

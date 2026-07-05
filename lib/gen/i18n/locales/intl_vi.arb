@@ -907,6 +907,30 @@
   "ocr_requeue_success": "Đã gửi yêu cầu xử lý lại. Quay lại danh sách để theo dõi tiến trình.",
   "ocr_export_txt_success": "Đã xuất file .txt",
   "ocr_export_pdf_processing": "Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.",
+  "ocr_export_pdf_success": "PDF searchable đã sẵn sàng.",
+  "ocr_export_pdf_timeout": "Hết thời gian chờ export PDF. Vui lòng thử lại sau.",
+  "ocr_activity_title": "Đang xử lý",
+  "ocr_activity_section_ocr": "Nhận dạng văn bản",
+  "ocr_activity_section_export": "Xuất file",
+  "ocr_activity_section_ready": "File sẵn sàng",
+  "ocr_activity_section_export_failed": "Xuất file thất bại",
+  "ocr_activity_empty_title": "Không có tác vụ đang chờ",
+  "ocr_activity_empty_subtitle": "Ảnh, văn bản OCR và file export đang xử lý sẽ hiển thị tại đây.",
+  "ocr_activity_retry": "Thử lại",
+  "ocr_activity_kind_ocr": "Nhận dạng OCR",
+  "ocr_activity_kind_export": "Xuất PDF/TXT",
+  "ocr_activity_processing": "Đang xử lý...",
+  "ocr_activity_page_progress": "Trang {current}/{total}",
+  "@ocr_activity_page_progress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "ocr_activity_open_pdf": "Mở PDF",
+  "ocr_activity_open_txt": "Mở TXT",
+  "ocr_activity_open_editor": "Chỉnh sửa",
+  "ocr_activity_export_failed_hint": "Xuất file thất bại.",
   "ocr_save_success": "Đã lưu chỉnh sửa OCR.",
   "ocr_preview_after_edit": "Preview sau chỉnh sửa",
   "ocr_page_label": "Trang {page}",
@@ -966,5 +990,18 @@
   "ocr_preset_h1": "H1",
   "ocr_preset_h2": "H2",
   "ocr_preset_h3": "H3",
-  "ocr_preset_caption": "Caption"
+  "ocr_preset_caption": "Caption",
+  "ocr_upload_pages_count": "Đã chọn {count} trang",
+  "@ocr_upload_pages_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocr_upload_reorder_hint": "Kéo thả để sắp xếp thứ tự trang trước khi OCR",
+  "ocr_add_page": "Thêm trang",
+  "ocr_clear_all": "Xóa tất cả",
+  "ocr_camera_permission": "Cần cấp quyền camera để chụp tài liệu.",
+  "ocr_upload_multi_pdf_name": "tai_lieu_quet.pdf"
 }

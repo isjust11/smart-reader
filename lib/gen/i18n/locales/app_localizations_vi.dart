@@ -2600,6 +2600,64 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đang xử lý PDF searchable. Kiểm tra lại sau vài giây.';
 
   @override
+  String get ocr_export_pdf_success => 'PDF searchable đã sẵn sàng.';
+
+  @override
+  String get ocr_export_pdf_timeout =>
+      'Hết thời gian chờ export PDF. Vui lòng thử lại sau.';
+
+  @override
+  String get ocr_activity_title => 'Đang xử lý';
+
+  @override
+  String get ocr_activity_section_ocr => 'Nhận dạng văn bản';
+
+  @override
+  String get ocr_activity_section_export => 'Xuất file';
+
+  @override
+  String get ocr_activity_section_ready => 'File sẵn sàng';
+
+  @override
+  String get ocr_activity_section_export_failed => 'Xuất file thất bại';
+
+  @override
+  String get ocr_activity_empty_title => 'Không có tác vụ đang chờ';
+
+  @override
+  String get ocr_activity_empty_subtitle =>
+      'Ảnh, văn bản OCR và file export đang xử lý sẽ hiển thị tại đây.';
+
+  @override
+  String get ocr_activity_retry => 'Thử lại';
+
+  @override
+  String get ocr_activity_kind_ocr => 'Nhận dạng OCR';
+
+  @override
+  String get ocr_activity_kind_export => 'Xuất PDF/TXT';
+
+  @override
+  String get ocr_activity_processing => 'Đang xử lý...';
+
+  @override
+  String ocr_activity_page_progress(int current, int total) {
+    return 'Trang $current/$total';
+  }
+
+  @override
+  String get ocr_activity_open_pdf => 'Mở PDF';
+
+  @override
+  String get ocr_activity_open_txt => 'Mở TXT';
+
+  @override
+  String get ocr_activity_open_editor => 'Chỉnh sửa';
+
+  @override
+  String get ocr_activity_export_failed_hint => 'Xuất file thất bại.';
+
+  @override
   String get ocr_save_success => 'Đã lưu chỉnh sửa OCR.';
 
   @override
@@ -2757,4 +2815,25 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ocr_preset_caption => 'Caption';
+
+  @override
+  String ocr_upload_pages_count(int count) {
+    return 'Đã chọn $count trang';
+  }
+
+  @override
+  String get ocr_upload_reorder_hint =>
+      'Kéo thả để sắp xếp thứ tự trang trước khi OCR';
+
+  @override
+  String get ocr_add_page => 'Thêm trang';
+
+  @override
+  String get ocr_clear_all => 'Xóa tất cả';
+
+  @override
+  String get ocr_camera_permission => 'Cần cấp quyền camera để chụp tài liệu.';
+
+  @override
+  String get ocr_upload_multi_pdf_name => 'tai_lieu_quet.pdf';
 }

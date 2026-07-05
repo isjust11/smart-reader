@@ -5056,6 +5056,114 @@ abstract class AppLocalizations {
   /// **'Processing searchable PDF. Check back in a few seconds.'**
   String get ocr_export_pdf_processing;
 
+  /// No description provided for @ocr_export_pdf_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Searchable PDF is ready.'**
+  String get ocr_export_pdf_success;
+
+  /// No description provided for @ocr_export_pdf_timeout.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF export timed out. Please try again later.'**
+  String get ocr_export_pdf_timeout;
+
+  /// No description provided for @ocr_activity_title.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get ocr_activity_title;
+
+  /// No description provided for @ocr_activity_section_ocr.
+  ///
+  /// In en, this message translates to:
+  /// **'Text recognition'**
+  String get ocr_activity_section_ocr;
+
+  /// No description provided for @ocr_activity_section_export.
+  ///
+  /// In en, this message translates to:
+  /// **'File export'**
+  String get ocr_activity_section_export;
+
+  /// No description provided for @ocr_activity_section_ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to open'**
+  String get ocr_activity_section_ready;
+
+  /// No description provided for @ocr_activity_section_export_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed'**
+  String get ocr_activity_section_export_failed;
+
+  /// No description provided for @ocr_activity_empty_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in progress'**
+  String get ocr_activity_empty_title;
+
+  /// No description provided for @ocr_activity_empty_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR jobs and file exports being processed will appear here.'**
+  String get ocr_activity_empty_subtitle;
+
+  /// No description provided for @ocr_activity_retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get ocr_activity_retry;
+
+  /// No description provided for @ocr_activity_kind_ocr.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR recognition'**
+  String get ocr_activity_kind_ocr;
+
+  /// No description provided for @ocr_activity_kind_export.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF/TXT export'**
+  String get ocr_activity_kind_export;
+
+  /// No description provided for @ocr_activity_processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get ocr_activity_processing;
+
+  /// No description provided for @ocr_activity_page_progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {current}/{total}'**
+  String ocr_activity_page_progress(int current, int total);
+
+  /// No description provided for @ocr_activity_open_pdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open PDF'**
+  String get ocr_activity_open_pdf;
+
+  /// No description provided for @ocr_activity_open_txt.
+  ///
+  /// In en, this message translates to:
+  /// **'Open TXT'**
+  String get ocr_activity_open_txt;
+
+  /// No description provided for @ocr_activity_open_editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get ocr_activity_open_editor;
+
+  /// No description provided for @ocr_activity_export_failed_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'File export failed.'**
+  String get ocr_activity_export_failed_hint;
+
   /// No description provided for @ocr_save_success.
   ///
   /// In en, this message translates to:
@@ -5355,6 +5463,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Caption'**
   String get ocr_preset_caption;
+
+  /// No description provided for @ocr_upload_pages_count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pages selected'**
+  String ocr_upload_pages_count(int count);
+
+  /// No description provided for @ocr_upload_reorder_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to reorder pages before OCR'**
+  String get ocr_upload_reorder_hint;
+
+  /// No description provided for @ocr_add_page.
+  ///
+  /// In en, this message translates to:
+  /// **'Add page'**
+  String get ocr_add_page;
+
+  /// No description provided for @ocr_clear_all.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get ocr_clear_all;
+
+  /// No description provided for @ocr_camera_permission.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan documents.'**
+  String get ocr_camera_permission;
+
+  /// No description provided for @ocr_upload_multi_pdf_name.
+  ///
+  /// In en, this message translates to:
+  /// **'scanned_document.pdf'**
+  String get ocr_upload_multi_pdf_name;
 }
 
 class _AppLocalizationsDelegate

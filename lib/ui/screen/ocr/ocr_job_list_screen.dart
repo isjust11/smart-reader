@@ -8,6 +8,7 @@ import 'package:readbox/injection_container.dart';
 import 'package:readbox/res/app_size.dart';
 import 'package:readbox/res/dimens.dart';
 import 'package:readbox/ui/screen/app_shell.dart';
+import 'package:readbox/ui/screen/ocr/ocr_activity_screen.dart';
 import 'package:readbox/ui/screen/ocr/ocr_upload_screen.dart';
 import 'package:readbox/ui/screen/ocr/ocr_editor_screen.dart';
 import 'package:readbox/ui/widget/widget.dart';
@@ -131,6 +132,20 @@ class _OcrJobListBodyState extends State<_OcrJobListBody> {
       colorBg: colorScheme.surface,
       title: 'Tài liệu OCR',
       showGlobalFloatingActions: false,
+      rightWidgets: [
+        IconButton(
+          tooltip: 'Đang xử lý',
+          icon: const Icon(Icons.pending_actions_outlined),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const OcrActivityScreen(),
+              ),
+            );
+          },
+        ),
+      ],
       body: Column(
         children: [
           _buildSearchBar(colorScheme),

@@ -296,7 +296,7 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Container(
@@ -309,7 +309,7 @@ class _OcrEditorPanelState extends State<OcrEditorPanel> {
                 child: TextField(
                   key: ValueKey('line-text-$index'),
                   controller: _textController,
-                  maxLines: 8,
+                  maxLines: 4,
                   autofocus: needsInput,
                   style: _editorTextStyle(_lineStyle),
                   decoration: InputDecoration(

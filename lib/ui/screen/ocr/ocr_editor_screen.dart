@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readbox/blocs/base_bloc/base_state.dart';
@@ -8,7 +10,9 @@ import 'package:readbox/domain/repositories/ocr_repository.dart';
 import 'package:readbox/gen/i18n/generated_locales/l10n.dart';
 import 'package:readbox/injection_container.dart';
 import 'package:readbox/res/res.dart';
+import 'package:readbox/services/ocr_socket_service.dart';
 import 'package:readbox/ui/widget/widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Màn chỉnh sửa kết quả OCR: phía trên thumbnail + preview; phía dưới panel
 /// chỉnh sửa kèm cột action dọc bên phải (undo/redo/lưu/menu).
@@ -21,7 +25,11 @@ class OcrEditorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => OcrEditorCubit(getIt<OcrRepository>(), jobId)..load(),
+      create: (_) => OcrEditorCubit(
+        getIt<OcrRepository>(),
+        getIt<OcrSocketService>(),
+        jobId,
+      )..load(),
       child: _OcrEditorBody(title: title),
     );
   }
@@ -125,6 +133,9 @@ class _OcrEditorBodyState extends State<_OcrEditorBody> {
                 onLineBboxChanged: (index, rect) => context
                     .read<OcrEditorCubit>()
                     .updateLineBbox(index, rect),
+                onRenderDirtyAcknowledged: () => context
+                    .read<OcrEditorCubit>()
+                    .clearCurrentPageRenderDirty(),
                 canPrev: data.currentPageIndex > 0,
                 canNext: data.currentPageIndex < data.pages.length - 1,
                 onPrevPage: () => context
@@ -304,6 +315,7 @@ class _OcrEditorBodyState extends State<_OcrEditorBody> {
 
   Future<void> _onExport(BuildContext context, String format) async {
     final cubit = context.read<OcrEditorCubit>();
+    final l = AppLocalizations.current;
     try {
       final state = cubit.state;
       if (state is LoadedState<OcrEditorLoaded> && state.data.isDirty) {
@@ -311,26 +323,45 @@ class _OcrEditorBodyState extends State<_OcrEditorBody> {
       }
       final result = await cubit.exportDocument(format);
       if (!context.mounted) return;
-      if (format == 'txt' && result?['url'] != null) {
+      final url = result?['url'] as String?;
+      if (format == 'txt' && url != null) {
         AppSnackBar.show(
           context,
-          message: AppLocalizations.current.ocr_export_txt_success,
+          message: l.ocr_export_txt_success,
           snackBarType: SnackBarType.success,
         );
+        await _openExportUrl(url);
+      } else if (format == 'pdf' && url != null) {
+        AppSnackBar.show(
+          context,
+          message: l.ocr_export_pdf_success,
+          snackBarType: SnackBarType.success,
+        );
+        await _openExportUrl(url);
       } else if (format == 'pdf') {
         AppSnackBar.show(
           context,
-          message: AppLocalizations.current.ocr_export_pdf_processing,
+          message: l.ocr_export_pdf_processing,
         );
       }
     } catch (e) {
       if (context.mounted) {
         AppSnackBar.show(
           context,
-          message: e.toString(),
+          message: e is TimeoutException
+              ? l.ocr_export_pdf_timeout
+              : e.toString(),
           snackBarType: SnackBarType.error,
         );
       }
+    }
+  }
+
+  Future<void> _openExportUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

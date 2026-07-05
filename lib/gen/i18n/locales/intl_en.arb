@@ -884,6 +884,30 @@
   "ocr_requeue_success": "Reprocess request sent. Go back to the job list to track progress.",
   "ocr_export_txt_success": "Exported .txt file",
   "ocr_export_pdf_processing": "Processing searchable PDF. Check back in a few seconds.",
+  "ocr_export_pdf_success": "Searchable PDF is ready.",
+  "ocr_export_pdf_timeout": "PDF export timed out. Please try again later.",
+  "ocr_activity_title": "In progress",
+  "ocr_activity_section_ocr": "Text recognition",
+  "ocr_activity_section_export": "File export",
+  "ocr_activity_section_ready": "Ready to open",
+  "ocr_activity_section_export_failed": "Export failed",
+  "ocr_activity_empty_title": "Nothing in progress",
+  "ocr_activity_empty_subtitle": "OCR jobs and file exports being processed will appear here.",
+  "ocr_activity_retry": "Retry",
+  "ocr_activity_kind_ocr": "OCR recognition",
+  "ocr_activity_kind_export": "PDF/TXT export",
+  "ocr_activity_processing": "Processing...",
+  "ocr_activity_page_progress": "Page {current}/{total}",
+  "@ocr_activity_page_progress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "ocr_activity_open_pdf": "Open PDF",
+  "ocr_activity_open_txt": "Open TXT",
+  "ocr_activity_open_editor": "Edit",
+  "ocr_activity_export_failed_hint": "File export failed.",
   "ocr_save_success": "OCR edits saved.",
   "ocr_preview_after_edit": "Preview after edits",
   "ocr_page_label": "Page {page}",
@@ -943,5 +967,18 @@
   "ocr_preset_h1": "H1",
   "ocr_preset_h2": "H2",
   "ocr_preset_h3": "H3",
-  "ocr_preset_caption": "Caption"
+  "ocr_preset_caption": "Caption",
+  "ocr_upload_pages_count": "{count} pages selected",
+  "@ocr_upload_pages_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocr_upload_reorder_hint": "Drag to reorder pages before OCR",
+  "ocr_add_page": "Add page",
+  "ocr_clear_all": "Clear all",
+  "ocr_camera_permission": "Camera permission is required to scan documents.",
+  "ocr_upload_multi_pdf_name": "scanned_document.pdf"
 }

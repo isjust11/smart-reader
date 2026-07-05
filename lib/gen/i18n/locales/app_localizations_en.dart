@@ -2597,6 +2597,64 @@ class AppLocalizationsEn extends AppLocalizations {
       'Processing searchable PDF. Check back in a few seconds.';
 
   @override
+  String get ocr_export_pdf_success => 'Searchable PDF is ready.';
+
+  @override
+  String get ocr_export_pdf_timeout =>
+      'PDF export timed out. Please try again later.';
+
+  @override
+  String get ocr_activity_title => 'In progress';
+
+  @override
+  String get ocr_activity_section_ocr => 'Text recognition';
+
+  @override
+  String get ocr_activity_section_export => 'File export';
+
+  @override
+  String get ocr_activity_section_ready => 'Ready to open';
+
+  @override
+  String get ocr_activity_section_export_failed => 'Export failed';
+
+  @override
+  String get ocr_activity_empty_title => 'Nothing in progress';
+
+  @override
+  String get ocr_activity_empty_subtitle =>
+      'OCR jobs and file exports being processed will appear here.';
+
+  @override
+  String get ocr_activity_retry => 'Retry';
+
+  @override
+  String get ocr_activity_kind_ocr => 'OCR recognition';
+
+  @override
+  String get ocr_activity_kind_export => 'PDF/TXT export';
+
+  @override
+  String get ocr_activity_processing => 'Processing...';
+
+  @override
+  String ocr_activity_page_progress(int current, int total) {
+    return 'Page $current/$total';
+  }
+
+  @override
+  String get ocr_activity_open_pdf => 'Open PDF';
+
+  @override
+  String get ocr_activity_open_txt => 'Open TXT';
+
+  @override
+  String get ocr_activity_open_editor => 'Edit';
+
+  @override
+  String get ocr_activity_export_failed_hint => 'File export failed.';
+
+  @override
   String get ocr_save_success => 'OCR edits saved.';
 
   @override
@@ -2754,4 +2812,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ocr_preset_caption => 'Caption';
+
+  @override
+  String ocr_upload_pages_count(int count) {
+    return '$count pages selected';
+  }
+
+  @override
+  String get ocr_upload_reorder_hint => 'Drag to reorder pages before OCR';
+
+  @override
+  String get ocr_add_page => 'Add page';
+
+  @override
+  String get ocr_clear_all => 'Clear all';
+
+  @override
+  String get ocr_camera_permission =>
+      'Camera permission is required to scan documents.';
+
+  @override
+  String get ocr_upload_multi_pdf_name => 'scanned_document.pdf';
 }

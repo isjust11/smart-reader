@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' show Offset, Rect;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readbox/blocs/base_bloc/base_state.dart';
@@ -5,16 +7,20 @@ import 'package:readbox/blocs/ocr/ocr_editor_state.dart';
 import 'package:readbox/blocs/utils.dart';
 import 'package:readbox/domain/data/models/models.dart';
 import 'package:readbox/domain/repositories/ocr_repository.dart';
+import 'package:readbox/services/ocr_socket_service.dart';
 import 'package:readbox/utils/ocr_add_line_geometry.dart';
 
 /// Cubit quản lý chỉnh sửa kết quả OCR: load trang, chọn bbox, sửa text/ảnh.
 class OcrEditorCubit extends Cubit<BaseState> {
   final OcrRepository _repository;
+  final OcrSocketService _socketService;
   final String jobId;
   final List<OcrEditorLoaded> _undoStack = [];
   final List<OcrEditorLoaded> _redoStack = [];
+  StreamSubscription<OcrJobUpdate>? _socketSub;
 
-  OcrEditorCubit(this._repository, this.jobId) : super(InitState());
+  OcrEditorCubit(this._repository, this._socketService, this.jobId)
+      : super(InitState());
 
   OcrEditorLoaded? get _loaded =>
       state is LoadedState<OcrEditorLoaded>
@@ -50,6 +56,9 @@ class OcrEditorCubit extends Cubit<BaseState> {
       final initializedPages = pages.map(_initPageStyles).toList();
       _undoStack.clear();
       _redoStack.clear();
+      await _socketService.connect();
+      _socketService.joinJob(job.rawId);
+      _bindSocket(job.rawId);
       emit(
         LoadedState(
           OcrEditorLoaded(job: job, pages: initializedPages),
@@ -119,7 +128,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final page = data.currentPage;
     if (index < 0 || index >= page.lines.length) return;
     final lines = List<OcrLineModel>.from(page.lines);
-    lines[index] = lines[index].copyWith(text: text);
+    lines[index] = lines[index].copyWith(text: text, renderDirty: true);
     _updatePage(
       data,
       page.copyWith(lines: lines, text: lines.map((e) => e.text).join('\n')),
@@ -133,7 +142,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final page = data.currentPage;
     if (index < 0 || index >= page.lines.length) return;
     final lines = List<OcrLineModel>.from(page.lines);
-    lines[index] = lines[index].copyWith(style: style);
+    lines[index] = lines[index].copyWith(style: style, renderDirty: true);
     _updatePage(
       data,
       page.copyWith(lines: lines, text: lines.map((e) => e.text).join('\n')),
@@ -151,6 +160,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final lines = List<OcrLineModel>.from(page.lines);
     lines[index] = lines[index].copyWith(
       bbox: OcrAddLineGeometry.rectToBbox(rect),
+      renderDirty: true,
     );
     _updatePage(
       data,
@@ -168,6 +178,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final base = lines[index].style ?? const OcrTextStyleModel();
     lines[index] = lines[index].copyWith(
       style: _styleForPreset(base.copyWith(preset: preset)),
+      renderDirty: true,
     );
     _updatePage(
       data,
@@ -182,7 +193,14 @@ class OcrEditorCubit extends Cubit<BaseState> {
     if (data == null) return;
     final page = data.currentPage;
     final lines = page.lines
-        .map((line) => line.copyWith(style: _styleForPreset((line.style ?? const OcrTextStyleModel()).copyWith(preset: preset))))
+        .map(
+          (line) => line.copyWith(
+            style: _styleForPreset(
+              (line.style ?? const OcrTextStyleModel()).copyWith(preset: preset),
+            ),
+            renderDirty: true,
+          ),
+        )
         .toList();
     _updatePage(
       data,
@@ -196,7 +214,9 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final data = _loaded;
     if (data == null) return;
     final page = data.currentPage;
-    final lines = page.lines.map(_withAutoPresetIfMissing).toList();
+    final lines = page.lines
+        .map((line) => _withAutoPresetIfMissing(line).copyWith(renderDirty: true))
+        .toList();
     _updatePage(
       data,
       page.copyWith(lines: lines, text: lines.map((e) => e.text).join('\n')),
@@ -210,7 +230,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final page = data.currentPage;
     if (index < 0 || index >= page.tables.length) return;
     final tables = List<OcrAssetModel>.from(page.tables);
-    tables[index] = tables[index].copyWith(tableHtml: html);
+    tables[index] = tables[index].copyWith(tableHtml: html, renderDirty: true);
     _updatePage(data, page.copyWith(tables: tables), isDirty: true);
   }
 
@@ -220,7 +240,10 @@ class OcrEditorCubit extends Cubit<BaseState> {
     final page = data.currentPage;
     if (index < 0 || index >= page.images.length) return;
     final images = List<OcrAssetModel>.from(page.images);
-    images[index] = images[index].copyWith(localImagePath: localPath);
+    images[index] = images[index].copyWith(
+      localImagePath: localPath,
+      renderDirty: true,
+    );
     _updatePage(data, page.copyWith(images: images), isDirty: true);
   }
 
@@ -247,6 +270,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
       confidence: 1,
       bbox: bbox,
       style: const OcrTextStyleModel(preset: OcrTextPreset.body),
+      renderDirty: true,
     );
     final newIndex = _insertLineByReadingOrder(lines, newLine);
     _updatePage(
@@ -338,6 +362,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
         if (moved == rect) return;
         lines[sel.index] = line.copyWith(
           bbox: OcrAddLineGeometry.rectToBbox(moved),
+          renderDirty: true,
         );
         _updatePage(
           data,
@@ -357,6 +382,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
         if (moved == rect) return;
         images[sel.index] = asset.copyWith(
           bbox: OcrAddLineGeometry.rectToBbox(moved),
+          renderDirty: true,
         );
         _updatePage(data, page.copyWith(images: images), isDirty: true);
       case OcrEditorSelectionKind.table:
@@ -369,6 +395,7 @@ class OcrEditorCubit extends Cubit<BaseState> {
         if (moved == rect) return;
         tables[sel.index] = asset.copyWith(
           bbox: OcrAddLineGeometry.rectToBbox(moved),
+          renderDirty: true,
         );
         _updatePage(data, page.copyWith(tables: tables), isDirty: true);
     }
@@ -461,12 +488,116 @@ class OcrEditorCubit extends Cubit<BaseState> {
     _emit(data.copyWith(isExporting: true));
     try {
       final result = await _repository.exportJob(jobId, format);
-      _emit(data.copyWith(isExporting: false));
+      if (format == 'pdf' && result['status'] == 'processing') {
+        final job = await _waitForPdfExport();
+        final current = _loaded;
+        if (current != null) {
+          _emit(current.copyWith(isExporting: false, job: job));
+        }
+        return {'format': 'pdf', 'url': job.pdfUrl, 'status': 'done'};
+      }
+      final current = _loaded ?? data;
+      final updatedJob = format == 'txt'
+          ? current.job.copyWith(txtUrl: result['url'] as String?)
+          : current.job;
+      _emit(current.copyWith(isExporting: false, job: updatedJob));
       return result;
     } catch (e) {
-      _emit(data.copyWith(isExporting: false));
+      final current = _loaded ?? data;
+      _emit(current.copyWith(isExporting: false));
       rethrow;
     }
+  }
+
+  /// Chờ worker export PDF — kết hợp socket realtime + poll GET job.
+  Future<OcrJobModel> _waitForPdfExport() async {
+    final data = _loaded;
+    if (data == null) {
+      throw StateError('Editor chưa load.');
+    }
+
+    final rawId = data.job.rawId;
+    await _socketService.connect();
+    _socketService.joinJob(rawId);
+
+    const pollInterval = Duration(seconds: 2);
+    const timeout = Duration(minutes: 3);
+    final deadline = DateTime.now().add(timeout);
+
+    while (DateTime.now().isBefore(deadline)) {
+      final job = await _repository.getJob(jobId);
+      _mergeJob(job);
+
+      if (job.exportStatus == 'done' &&
+          job.pdfUrl != null &&
+          job.pdfUrl!.isNotEmpty) {
+        return job;
+      }
+      if (job.exportStatus == 'failed') {
+        throw Exception(job.exportError ?? 'Export PDF thất bại.');
+      }
+
+      await Future<void>.delayed(pollInterval);
+
+      final current = _loaded?.job;
+      if (current != null &&
+          current.exportStatus == 'done' &&
+          current.pdfUrl != null &&
+          current.pdfUrl!.isNotEmpty) {
+        return current;
+      }
+      if (current?.exportStatus == 'failed') {
+        throw Exception(current?.exportError ?? 'Export PDF thất bại.');
+      }
+    }
+    throw TimeoutException('Hết thời gian chờ export PDF.');
+  }
+
+  void _bindSocket(int rawId) {
+    _socketSub?.cancel();
+    _socketSub = _socketService.updates.listen((update) {
+      if (update.jobId != rawId) return;
+      final data = _loaded;
+      if (data == null) return;
+      final job = data.job.applyUpdate(
+        status: update.status,
+        processedPages: update.processedPages,
+        totalPages: update.totalPages,
+        error: update.error,
+        exportStatus: update.exportStatus,
+        pdfUrl: update.pdfUrl,
+        exportError: update.exportError,
+      );
+      _emit(data.copyWith(job: job));
+    });
+  }
+
+  void _mergeJob(OcrJobModel job) {
+    final data = _loaded;
+    if (data == null) return;
+    _emit(data.copyWith(job: job));
+  }
+
+  @override
+  Future<void> close() {
+    final rawId = _loaded?.job.rawId;
+    if (rawId != null && rawId > 0) {
+      _socketService.leaveJob(rawId);
+    }
+    _socketSub?.cancel();
+    return super.close();
+  }
+
+  /// Xóa cờ renderDirty sau khi preview nền trắng đã vẽ xong.
+  void clearCurrentPageRenderDirty() {
+    final data = _loaded;
+    if (data == null) return;
+    final page = data.currentPage;
+    if (!page.hasRenderDirty) return;
+
+    final pages = List<OcrPageModel>.from(data.pages);
+    pages[data.currentPageIndex] = page.withRenderDirtyCleared();
+    _emit(data.copyWith(pages: pages));
   }
 
   Future<void> saveEdits() async {
@@ -474,8 +605,9 @@ class OcrEditorCubit extends Cubit<BaseState> {
     if (data == null || !data.isDirty) return;
     _emit(data.copyWith(isSaving: true));
     try {
-      await _repository.saveResult(jobId, data.pages);
-      _emit(data.copyWith(isSaving: false, isDirty: false));
+      final pages = data.pages.map((p) => p.withRenderDirtyCleared()).toList();
+      await _repository.saveResult(jobId, pages);
+      _emit(data.copyWith(pages: pages, isSaving: false, isDirty: false));
       _undoStack.clear();
       _redoStack.clear();
     } catch (e) {

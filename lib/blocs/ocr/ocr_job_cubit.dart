@@ -125,6 +125,9 @@ class OcrJobCubit extends Cubit<BaseState> {
       processedPages: update.processedPages,
       totalPages: update.totalPages,
       error: update.error,
+      exportStatus: update.exportStatus,
+      pdfUrl: update.pdfUrl,
+      exportError: update.exportError,
     );
     _emitList();
   }

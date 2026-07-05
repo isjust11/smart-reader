@@ -38,6 +38,9 @@ class OcrPagePreview extends StatefulWidget {
   /// Cập nhật bbox dòng sau khi kéo/chỉnh trên preview.
   final void Function(int index, Rect rect)? onLineBboxChanged;
 
+  /// Xóa cờ renderDirty sau khi preview nền trắng vẽ xong.
+  final VoidCallback? onRenderDirtyAcknowledged;
+
   const OcrPagePreview({
     super.key,
     required this.job,
@@ -54,6 +57,7 @@ class OcrPagePreview extends StatefulWidget {
     this.onPendingRectChanged,
     this.pendingRect,
     this.onLineBboxChanged,
+    this.onRenderDirtyAcknowledged,
   });
 
   @override
@@ -338,6 +342,8 @@ class _OcrPagePreviewState extends State<OcrPagePreview> {
                                   onSelectedLineMove: _onSelectedLineMove,
                                   onSelectedLineResize: _onSelectedLineResize,
                                   onSelectedLineEditEnd: _commitSelectedLineEdit,
+                                  onRenderDirtyAcknowledged:
+                                      widget.onRenderDirtyAcknowledged,
                                 ),
                               ),
                             );

@@ -12,6 +12,9 @@ class OcrJobUpdate {
   final int? processedPages;
   final int? totalPages;
   final String? error;
+  final String? exportStatus;
+  final String? pdfUrl;
+  final String? exportError;
 
   const OcrJobUpdate({
     required this.jobId,
@@ -19,6 +22,9 @@ class OcrJobUpdate {
     this.processedPages,
     this.totalPages,
     this.error,
+    this.exportStatus,
+    this.pdfUrl,
+    this.exportError,
   });
 
   factory OcrJobUpdate.fromMap(Map<String, dynamic> map) {
@@ -29,6 +35,9 @@ class OcrJobUpdate {
           map['processedPages'] == null ? null : _toInt(map['processedPages']),
       totalPages: map['totalPages'] == null ? null : _toInt(map['totalPages']),
       error: map['error'] as String?,
+      exportStatus: map['exportStatus'] as String?,
+      pdfUrl: map['pdfUrl'] as String?,
+      exportError: map['exportError'] as String?,
     );
   }
 

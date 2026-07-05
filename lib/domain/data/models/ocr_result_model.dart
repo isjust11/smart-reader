@@ -116,12 +116,16 @@ class OcrLineModel {
   final OcrTextStyleModel? style;
   final List<OcrTextRunModel> runs;
 
+  /// Chỉ dùng client-side: cần vẽ lại trên preview nền trắng.
+  final bool renderDirty;
+
   const OcrLineModel({
     required this.text,
     this.confidence = 0,
     this.bbox = const [],
     this.style,
     this.runs = const [],
+    this.renderDirty = false,
   });
 
   factory OcrLineModel.fromJson(Map<String, dynamic> json) {
@@ -143,6 +147,8 @@ class OcrLineModel {
     List<Offset>? bbox,
     OcrTextStyleModel? style,
     List<OcrTextRunModel>? runs,
+    bool? renderDirty,
+    bool clearRenderDirty = false,
   }) {
     return OcrLineModel(
       text: text ?? this.text,
@@ -150,6 +156,7 @@ class OcrLineModel {
       bbox: bbox ?? this.bbox,
       style: style ?? this.style,
       runs: runs ?? this.runs,
+      renderDirty: clearRenderDirty ? false : (renderDirty ?? this.renderDirty),
     );
   }
 
@@ -179,6 +186,9 @@ class OcrAssetModel {
   /// Ảnh thay thế cục bộ (chưa upload server) — chỉ dùng trong editor.
   final String? localImagePath;
 
+  /// Chỉ dùng client-side: cần vẽ lại trên preview nền trắng.
+  final bool renderDirty;
+
   const OcrAssetModel({
     required this.type,
     this.bbox = const [],
@@ -187,6 +197,7 @@ class OcrAssetModel {
     this.tableHtml,
     this.source,
     this.localImagePath,
+    this.renderDirty = false,
   });
 
   factory OcrAssetModel.fromJson(Map<String, dynamic> json) {
@@ -208,6 +219,8 @@ class OcrAssetModel {
     String? tableHtml,
     String? source,
     String? localImagePath,
+    bool? renderDirty,
+    bool clearRenderDirty = false,
   }) {
     return OcrAssetModel(
       type: type ?? this.type,
@@ -217,6 +230,7 @@ class OcrAssetModel {
       tableHtml: tableHtml ?? this.tableHtml,
       source: source ?? this.source,
       localImagePath: localImagePath ?? this.localImagePath,
+      renderDirty: clearRenderDirty ? false : (renderDirty ?? this.renderDirty),
     );
   }
 
@@ -310,6 +324,20 @@ class OcrPageModel {
       text?.trim().isNotEmpty == true
           ? text!
           : lines.map((e) => e.text).join('\n');
+
+  /// Có thành phần cần vẽ lại trên preview nền trắng.
+  bool get hasRenderDirty =>
+      lines.any((e) => e.renderDirty) ||
+      images.any((e) => e.renderDirty) ||
+      tables.any((e) => e.renderDirty);
+
+  OcrPageModel withRenderDirtyCleared() {
+    return copyWith(
+      lines: lines.map((l) => l.copyWith(clearRenderDirty: true)).toList(),
+      images: images.map((a) => a.copyWith(clearRenderDirty: true)).toList(),
+      tables: tables.map((t) => t.copyWith(clearRenderDirty: true)).toList(),
+    );
+  }
 }
 
 List<T> _parseList<T>(
